@@ -3,6 +3,21 @@
   "displayName": "Clarity - Prompt Improver for Copilot",
   "description": "Improves developer prompts by fixing grammar, spelling, and clarity before sending to Copilot",
   "version": "0.0.1",
+  "publisher": "attafii",
+  "author": "Ahmed Attafi",
+  "license": "MIT",
+  "icon": "ClarityAI-logo.png",
+  "keywords": [
+    "copilot",
+    "chat",
+    "prompt",
+    "clarity",
+    "ai",
+    "assistant",
+    "grammar",
+    "spelling",
+    "improvement"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/Attafii/ClarityAI.git"
@@ -39,10 +54,6 @@
       {
         "command": "clarity.forwardToCopilot",
         "title": "Send to Copilot"
-      },
-      {
-        "command": "clarity.debugCommands",
-        "title": "Clarity: Debug Available Commands"
       }
     ],
     "configuration": {

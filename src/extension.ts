@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { getConfig } from './config';
 import { improvePrompt } from './autocorrect';
-import { forwardToCopilot } from './forward';
+import { forwardToCopilot, debugAvailableCommands } from './forward';
 
 /**
  * Clarity VS Code Extension - Entry Point
@@ -20,6 +20,9 @@ let clarityParticipant: vscode.ChatParticipant | undefined;
  */
 export function activate(context: vscode.ExtensionContext) {
     console.log('Clarity extension is now active!');
+
+    // Debug: Log available commands to help with forwarding
+    debugAvailableCommands();
 
     // Register the @clarity chat participant
     registerChatParticipant(context);
@@ -125,15 +128,27 @@ async function handleChatRequest(
                 await forwardToCopilot(improvedPrompt);
                 stream.markdown('✅ **Sent to Copilot successfully!**');
             } catch (error) {
-                stream.markdown('❌ **Failed to forward to Copilot.** Please try again or switch to Confirmation Mode.');
+                // Enhanced fallback with copy to clipboard
+                await vscode.env.clipboard.writeText(improvedPrompt);
+                stream.markdown('⚠️ **Auto-forward failed, but prompt was copied to clipboard.**\n\n');
+                stream.markdown('📋 **Paste the enhanced prompt in the Copilot chat panel.**\n\n');
+                stream.button({
+                    title: '💬 Open Chat Panel',
+                    command: 'workbench.view.chat'
+                });
                 console.error('Failed to forward to Copilot:', error);
             }
         } else {
-            // Confirmation Mode: Show button for manual forwarding
-            stream.markdown('👆 **Click below to send the improved prompt to Copilot:**\n\n');
+            // Confirmation Mode: Show buttons for manual forwarding and copying
+            stream.markdown('👆 **Choose an action:**\n\n');
             stream.button({
                 title: '🤖 Send to Copilot',
                 command: 'clarity.forwardToCopilot',
+                arguments: [improvedPrompt]
+            });
+            stream.button({
+                title: '📋 Copy Prompt',
+                command: 'clarity.copyPrompt',
                 arguments: [improvedPrompt]
             });
         }
@@ -182,8 +197,22 @@ function registerCommands(context: vscode.ExtensionContext) {
             await forwardToCopilot(improvedPrompt);
             vscode.window.showInformationMessage('✅ Prompt sent to Copilot successfully!');
         } catch (error) {
-            vscode.window.showErrorMessage('❌ Failed to send prompt to Copilot. Make sure Copilot is available.');
+            // Fallback: Copy to clipboard and open chat
+            await vscode.env.clipboard.writeText(improvedPrompt);
+            await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
+            vscode.window.showWarningMessage('❌ Auto-forward failed. Prompt copied to clipboard - paste it in the chat panel.');
             console.error('Failed to forward to Copilot:', error);
+        }
+    });
+
+    // Command: Copy improved prompt to clipboard
+    const copyPromptCommand = vscode.commands.registerCommand('clarity.copyPrompt', async (improvedPrompt: string) => {
+        try {
+            await vscode.env.clipboard.writeText(improvedPrompt);
+            vscode.window.showInformationMessage('📋 Enhanced prompt copied to clipboard!');
+        } catch (error) {
+            vscode.window.showErrorMessage('❌ Failed to copy prompt to clipboard.');
+            console.error('Failed to copy prompt:', error);
         }
     });
 
@@ -191,7 +220,8 @@ function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         switchToInstantMode,
         switchToConfirmationMode,
-        forwardToCopilotCommand
+        forwardToCopilotCommand,
+        copyPromptCommand
     );
 }
 

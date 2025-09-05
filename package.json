@@ -39,6 +39,10 @@
       {
         "command": "clarity.forwardToCopilot",
         "title": "Send to Copilot"
+      },
+      {
+        "command": "clarity.debugCommands",
+        "title": "Clarity: Debug Available Commands"
       }
     ],
     "configuration": {

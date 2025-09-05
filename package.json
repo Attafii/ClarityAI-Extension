@@ -1,0 +1,86 @@
+{
+  "name": "clarity",
+  "displayName": "Clarity - Prompt Improver for Copilot",
+  "description": "Improves developer prompts by fixing grammar, spelling, and clarity before sending to Copilot",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Attafii/ClarityAI.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "AI",
+    "Chat"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "clarity",
+        "name": "clarity",
+        "description": "Improves your prompts before sending them to Copilot",
+        "isSticky": false
+      }
+    ],
+    "commands": [
+      {
+        "command": "clarity.switchToInstantMode",
+        "title": "Clarity: Switch to Instant Mode"
+      },
+      {
+        "command": "clarity.switchToConfirmationMode",
+        "title": "Clarity: Switch to Confirmation Mode"
+      },
+      {
+        "command": "clarity.forwardToCopilot",
+        "title": "Send to Copilot"
+      }
+    ],
+    "configuration": {
+      "title": "Clarity",
+      "properties": {
+        "clarity.mode": {
+          "type": "string",
+          "enum": [
+            "instant",
+            "confirmation"
+          ],
+          "default": "confirmation",
+          "description": "Choose how Clarity handles improved prompts: 'instant' forwards automatically, 'confirmation' shows a button"
+        },
+        "clarity.useExternalLLM": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use external LLM API for higher-quality prompt improvement (requires API key)"
+        },
+        "clarity.geminiApiKey": {
+          "type": "string",
+          "default": "AIzaSyDxIfZIb2q_5vrrYPS702rjPnxn2gW9Tec",
+          "description": "Google Gemini API key for external LLM corrections"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "test-gemini": "node -r ts-node/register src/test-gemini-integration.ts"
+  },
+  "devDependencies": {
+    "@types/node": "20.x",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.6.0",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@types/node-fetch": "^2.6.11",
+    "node-fetch": "^2.7.0"
+  }
+}

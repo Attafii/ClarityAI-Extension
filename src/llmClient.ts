@@ -1,4 +1,4 @@
-import { getConfig, validateExternalLLMConfig } from './config';
+import { getConfig, validateApiKey } from './config';
 
 /**
  * Interface for Gemini API response
@@ -14,6 +14,65 @@ interface GeminiResponse {
 }
 
 /**
+ * Extracts the clean enhanced prompt from Gemini's response, removing explanatory text
+ * @param geminiResponse The full response from Gemini API
+ * @returns The clean enhanced prompt without commentary
+ */
+function extractEnhancedPrompt(geminiResponse: string): string {
+    // Common patterns that Gemini uses to introduce enhanced prompts
+    const introPatterns = [
+        /Here's the enhanced prompt:\s*/i,
+        /Enhanced prompt:\s*/i,
+        /Here's a better version:\s*/i,
+        /Here's the improved prompt:\s*/i,
+        /Improved prompt:\s*/i,
+        /Here's the structured prompt:\s*/i,
+        /Structured prompt:\s*/i,
+        /Here's a more detailed version:\s*/i,
+        /Better prompt:\s*/i,
+        /Optimized prompt:\s*/i,
+        /Here's the enhanced version:\s*/i,
+        /^.*?Here's.*?:\s*/i,
+        /^.*?enhanced.*?:\s*/i,
+        /^.*?improved.*?:\s*/i
+    ];
+    
+    let cleaned = geminiResponse.trim();
+    
+    // Remove common introductory phrases
+    for (const pattern of introPatterns) {
+        cleaned = cleaned.replace(pattern, '');
+    }
+    
+    // Remove leading explanatory text (everything before the actual prompt)
+    // Look for patterns like "Okay, I've analyzed..." or "I understand..."
+    const explanationPatterns = [
+        /^(Okay,|Sure,|I've|I understand|Let me|Here's what I|I'll|I can|This prompt).*?[.!]\s*/i,
+        /^.*?analyzed.*?[.!]\s*/i,
+        /^.*?created.*?[.!]\s*/i,
+        /^.*?enhanced.*?[.!]\s*/i,
+        /^.*?improved.*?[.!]\s*/i
+    ];
+    
+    for (const pattern of explanationPatterns) {
+        cleaned = cleaned.replace(pattern, '');
+    }
+    
+    // Remove quotes if the entire response is wrapped in them
+    cleaned = cleaned.replace(/^["'`]+|["'`]+$/g, '');
+    
+    // Remove any remaining leading/trailing whitespace
+    cleaned = cleaned.trim();
+    
+    // If the cleaned version is too short or empty, return the original (fallback)
+    if (cleaned.length < 10) {
+        return geminiResponse.trim();
+    }
+    
+    return cleaned;
+}
+
+/**
  * Calls external LLM (Google Gemini) to improve a prompt
  * @param prompt The prompt to improve
  * @returns The improved prompt from the LLM
@@ -22,12 +81,8 @@ export async function callExternalLLM(prompt: string): Promise<string> {
     const config = getConfig();
     
     // Validate configuration
-    if (!validateExternalLLMConfig(config)) {
-        throw new Error('External LLM is enabled but API key is not configured. Please set clarity.geminiApiKey in settings.');
-    }
-    
-    if (!config.geminiApiKey) {
-        throw new Error('Gemini API key not configured');
+    if (!validateApiKey(config)) {
+        throw new Error('Gemini API key is not configured. Please set clarity.geminiApiKey in settings.');
     }
     
     // Construct the system prompt for intelligent prompt enhancement
@@ -103,9 +158,12 @@ ENHANCED PROMPT:`;
             throw new Error('Empty response from Gemini API');
         }
         
-        console.log('✅ Gemini API response received:', improvedPrompt.substring(0, 100) + '...');
+        // Clean the response to extract just the enhanced prompt
+        const cleanedPrompt = extractEnhancedPrompt(improvedPrompt);
         
-        return improvedPrompt;
+        console.log('✅ Gemini API response received and cleaned');
+        
+        return cleanedPrompt;
         
     } catch (error) {
         console.error('Error calling external LLM:', error);
@@ -140,15 +198,13 @@ export async function testExternalLLM(): Promise<boolean> {
  */
 export function getLLMStatus(): {
     isConfigured: boolean;
-    isEnabled: boolean;
     provider: string;
     hasApiKey: boolean;
 } {
     const config = getConfig();
     
     return {
-        isConfigured: validateExternalLLMConfig(config),
-        isEnabled: config.useExternalLLM,
+        isConfigured: validateApiKey(config),
         provider: 'Google Gemini',
         hasApiKey: config.geminiApiKey.trim() !== ''
     };

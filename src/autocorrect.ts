@@ -114,31 +114,28 @@ export interface StructuredPrompt {
 }
 
 /**
- * Improves a prompt by applying local autocorrect and optionally external LLM
+ * Improves a prompt by applying local autocorrect and Gemini 2.0 Flash enhancement
  * Uses a structured approach with universal prompt formula
  * @param prompt The original user prompt
- * @param useExternalLLM Whether to use external LLM for additional improvements
- * @returns The improved prompt
+ * @returns The improved prompt enhanced by Gemini 2.0 Flash
  */
-export async function improvePrompt(prompt: string, useExternalLLM: boolean = false): Promise<string> {
+export async function improvePrompt(prompt: string): Promise<string> {
     let improvedPrompt = prompt;
     
     // Step 1: Apply basic local corrections (typos and grammar)
     improvedPrompt = applyLocalCorrections(improvedPrompt);
     
-    // Step 2: If external LLM is enabled, use Gemini 2.0 Flash for intelligent enhancement
-    if (useExternalLLM) {
-        try {
-            console.log('🤖 Sending prompt to Gemini 2.0 Flash for intelligent enhancement...');
-            const geminiEnhanced = await callExternalLLM(improvedPrompt);
-            if (geminiEnhanced && geminiEnhanced.trim() !== '') {
-                console.log('✅ Received enhanced prompt from Gemini');
-                return geminiEnhanced.trim();
-            }
-        } catch (error) {
-            console.warn('⚠️ Gemini API failed, falling back to local corrections:', error);
-            // Continue with local processing below
+    // Step 2: Use Gemini 2.0 Flash for intelligent enhancement
+    try {
+        console.log('🤖 Sending prompt to Gemini 2.0 Flash for intelligent enhancement...');
+        const geminiEnhanced = await callExternalLLM(improvedPrompt);
+        if (geminiEnhanced && geminiEnhanced.trim() !== '') {
+            console.log('✅ Received enhanced prompt from Gemini');
+            return geminiEnhanced.trim();
         }
+    } catch (error) {
+        console.warn('⚠️ Gemini API failed, falling back to local corrections:', error);
+        // Continue with local processing below
     }
     
     // Step 3: Fallback - return with basic corrections only
@@ -148,21 +145,18 @@ export async function improvePrompt(prompt: string, useExternalLLM: boolean = fa
 /**
  * Main function that parses and classifies any user input into structured format
  * @param prompt The user's input prompt (can be vague)
- * @param useExternalLLM Whether to use Gemini API for inference
- * @returns Structured prompt object
+ * @returns Structured prompt object enhanced by Gemini API
  */
-export async function parseAndClassifyPrompt(prompt: string, useExternalLLM: boolean = false): Promise<StructuredPrompt> {
+export async function parseAndClassifyPrompt(prompt: string): Promise<StructuredPrompt> {
     // Step 1: Apply local analysis to extract what we can
     const localAnalysis = analyzePromptComponents(prompt);
     
-    // Step 2: If external LLM is enabled, use it to infer missing details
+    // Step 2: Use Gemini to infer missing details
     let enrichedAnalysis = localAnalysis;
-    if (useExternalLLM) {
-        try {
-            enrichedAnalysis = await enrichWithGemini(prompt, localAnalysis);
-        } catch (error) {
-            console.warn('Gemini enrichment failed, using local analysis only:', error);
-        }
+    try {
+        enrichedAnalysis = await enrichWithGemini(prompt, localAnalysis);
+    } catch (error) {
+        console.warn('Gemini enrichment failed, using local analysis only:', error);
     }
     
     // Step 3: Apply defaults for missing critical components

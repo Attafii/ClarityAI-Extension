@@ -6,70 +6,112 @@ import * as vscode from 'vscode';
  * @param improvedPrompt The improved prompt text to send to Copilot
  */
 export async function forwardToCopilot(improvedPrompt: string): Promise<void> {
+    console.log('🚀 Attempting to forward prompt to Copilot:', improvedPrompt.substring(0, 50) + '...');
+    
+    const errors: string[] = [];
+    
+    // Method 1: Try the new chat API approach (VS Code 1.90+)
     try {
-        // Primary method: Use the direct chat send command with Copilot target
-        // This should work with the latest VS Code and GitHub Copilot extension
         await vscode.commands.executeCommand(
-            'workbench.action.chat.sendMessage', 
-            improvedPrompt,
-            { target: "@copilot" }
+            'workbench.action.chat.open',
+            {
+                query: `@copilot ${improvedPrompt}`,
+                isPartialQuery: false
+            }
         );
         
-        console.log('✅ Successfully forwarded prompt to Copilot via direct command');
+        console.log('✅ Successfully forwarded prompt to Copilot via chat.open');
+        return;
         
-    } catch (primaryError) {
-        console.warn('Primary forwarding method failed, trying alternatives:', primaryError);
+    } catch (error) {
+        const errorMsg = `Method 1 (chat.open) failed: ${error}`;
+        console.warn(errorMsg);
+        errors.push(errorMsg);
+    }
+    
+    // Method 2: Open chat panel and insert text
+    try {
+        await vscode.commands.executeCommand('workbench.view.chat');
         
+        // Wait for panel to load
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Insert the text into the chat input
+        await vscode.commands.executeCommand(
+            'workbench.action.chat.insertAtCursor',
+            `@copilot ${improvedPrompt}`
+        );
+        
+        // Attempt to submit by simulating an Enter keypress in the chat input
         try {
-            // Alternative method 1: Try the newer chat submit command
-            await vscode.commands.executeCommand(
-                'workbench.action.chat.submit',
-                `@copilot ${improvedPrompt}`
-            );
-            
-            console.log('✅ Successfully forwarded prompt to Copilot via submit command');
-            
-        } catch (alternativeError) {
-            console.warn('Alternative forwarding method failed:', alternativeError);
-            
-            try {
-                // Alternative method 2: Focus chat first, then send
-                await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
-                
-                // Wait a moment for the panel to load
-                await new Promise(resolve => setTimeout(resolve, 200));
-                
-                // Try to send the message
-                await vscode.commands.executeCommand(
-                    'workbench.action.chat.sendMessage',
-                    improvedPrompt,
-                    { target: "@copilot" }
-                );
-                
-                console.log('✅ Successfully forwarded prompt to Copilot via focus + send');
-                
-            } catch (finalError) {
-                console.error('All forwarding methods failed:', finalError);
-                
-                // Last resort: Copy to clipboard and show error
-                await vscode.env.clipboard.writeText(improvedPrompt);
-                
-                // Display user-friendly error message
-                vscode.window.showErrorMessage(
-                    '❌ Failed to automatically send prompt to Copilot. ' +
-                    'The enhanced prompt has been copied to your clipboard - ' +
-                    'please paste it in the Copilot chat manually.',
-                    'Open Chat Panel'
-                ).then(selection => {
-                    if (selection === 'Open Chat Panel') {
-                        vscode.commands.executeCommand('workbench.view.chat');
-                    }
-                });
-                
-                // Re-throw the error so calling code knows it failed
-                throw new Error(`Auto-forward failed: ${finalError}`);
-            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+            await vscode.commands.executeCommand('type', { text: '\n' });
+            console.log('✅ Successfully inserted prompt and submitted via simulated Enter');
+            return;
+        } catch (sendError) {
+            console.warn('Simulated Enter submit failed, leaving prompt in input for manual send:', sendError);
+            console.log('✅ Successfully inserted prompt into Copilot chat (not auto-submitted)');
+            return;
         }
+        return;
+        
+    } catch (error) {
+        const errorMsg = `Method 2 (insertAtCursor) failed: ${error}`;
+        console.warn(errorMsg);
+        errors.push(errorMsg);
+    }
+    
+    // Method 3: Try direct send message command
+    try {
+        await vscode.commands.executeCommand('workbench.view.chat');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        await vscode.commands.executeCommand(
+            'workbench.action.chat.sendMessage',
+            `@copilot ${improvedPrompt}`
+        );
+        
+        console.log('✅ Successfully sent prompt via sendMessage');
+        return;
+        
+    } catch (error) {
+        const errorMsg = `Method 3 (sendMessage) failed: ${error}`;
+        console.warn(errorMsg);
+        errors.push(errorMsg);
+    }
+    
+    // Method 4: Focus Copilot specific panel and copy
+    try {
+        await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Copy to clipboard with @copilot prefix
+        await vscode.env.clipboard.writeText(`@copilot ${improvedPrompt}`);
+        
+        // Show user guidance
+        vscode.window.showInformationMessage(
+            '📋 Prompt copied with @copilot prefix. Please paste it in the chat panel and press Enter.',
+            'Got it!'
+        );
+        
+        console.log('✅ Prompt copied to clipboard with @copilot prefix and Copilot panel focused');
+        return;
+        
+    } catch (error) {
+        const errorMsg = `Method 4 (focus + copy) failed: ${error}`;
+        console.warn(errorMsg);
+        errors.push(errorMsg);
+    }
+    
+    // All methods failed
+    console.error('All forwarding methods failed:', errors);
+    
+    // Last resort: Just copy to clipboard
+    try {
+        await vscode.env.clipboard.writeText(improvedPrompt);
+        throw new Error(`All 4 forwarding methods failed. Errors: ${errors.join('; ')}`);
+    } catch (clipboardError) {
+        throw new Error(`Complete failure: ${clipboardError}`);
     }
 }
 
@@ -106,22 +148,45 @@ export async function isCopilotAvailable(): Promise<boolean> {
 export async function debugAvailableCommands(): Promise<void> {
     try {
         const allCommands = await vscode.commands.getCommands();
-        const relevantCommands = allCommands.filter((cmd: string) => 
+        const chatCommands = allCommands.filter((cmd: string) => 
             cmd.includes('chat') || 
             cmd.includes('copilot') ||
             cmd.includes('github')
         );
         
-        console.log('🔍 Available Chat/Copilot Commands:');
-        relevantCommands.forEach(cmd => console.log('  -', cmd));
+        console.log('🔍 Available Chat/Copilot Commands (' + chatCommands.length + ' found):');
+        chatCommands.forEach(cmd => console.log('  -', cmd));
         
-        // Also log extension info
+        // Check extension status
         const copilotExt = vscode.extensions.getExtension('GitHub.copilot');
         const chatExt = vscode.extensions.getExtension('GitHub.copilot-chat');
         
         console.log('🔍 Extension Status:');
-        console.log('  - GitHub.copilot:', copilotExt ? 'Found' : 'Not found');
-        console.log('  - GitHub.copilot-chat:', chatExt ? 'Found' : 'Not found');
+        console.log('  - GitHub.copilot:', copilotExt ? `Found (Active: ${copilotExt.isActive})` : 'Not found');
+        console.log('  - GitHub.copilot-chat:', chatExt ? `Found (Active: ${chatExt.isActive})` : 'Not found');
+        
+        // Test if we can access chat view
+        try {
+            await vscode.commands.executeCommand('workbench.view.chat');
+            console.log('✅ Chat view accessible');
+        } catch (error) {
+            console.log('❌ Chat view not accessible:', error);
+        }
+        
+        // Look for specific chat commands we want to use
+        const targetCommands = [
+            'workbench.action.chat.open',
+            'workbench.action.chat.insertAtCursor',
+            'workbench.panel.chat.view.copilot.focus',
+            'workbench.action.chat.sendMessage',
+            'workbench.action.chat.submit'
+        ];
+        
+        console.log('🎯 Target commands availability:');
+        targetCommands.forEach(cmd => {
+            const available = chatCommands.includes(cmd);
+            console.log(`  - ${cmd}: ${available ? '✅ Available' : '❌ Not found'}`);
+        });
         
     } catch (error) {
         console.error('Error debugging commands:', error);

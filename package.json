@@ -6,7 +6,7 @@
   "publisher": "attafii",
   "author": "Ahmed Attafi",
   "license": "MIT",
-  "icon": "ClarityAI-logo.png",
+  "icon": "img/ClarityAI-logo.png",
   "keywords": [
     "copilot",
     "chat",
@@ -44,14 +44,6 @@
     ],
     "commands": [
       {
-        "command": "clarity.switchToInstantMode",
-        "title": "Clarity: Switch to Instant Mode"
-      },
-      {
-        "command": "clarity.switchToConfirmationMode",
-        "title": "Clarity: Switch to Confirmation Mode"
-      },
-      {
         "command": "clarity.forwardToCopilot",
         "title": "Send to Copilot"
       }
@@ -59,24 +51,10 @@
     "configuration": {
       "title": "Clarity",
       "properties": {
-        "clarity.mode": {
-          "type": "string",
-          "enum": [
-            "instant",
-            "confirmation"
-          ],
-          "default": "confirmation",
-          "description": "Choose how Clarity handles improved prompts: 'instant' forwards automatically, 'confirmation' shows a button"
-        },
-        "clarity.useExternalLLM": {
-          "type": "boolean",
-          "default": true,
-          "description": "Use external LLM API for higher-quality prompt improvement (requires API key)"
-        },
         "clarity.geminiApiKey": {
           "type": "string",
           "default": "AIzaSyDxIfZIb2q_5vrrYPS702rjPnxn2gW9Tec",
-          "description": "Google Gemini API key for external LLM corrections"
+          "description": "Google Gemini API key for prompt enhancement"
         }
       }
     }

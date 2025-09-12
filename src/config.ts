@@ -4,8 +4,6 @@ import * as vscode from 'vscode';
  * Configuration interface for Clarity extension
  */
 export interface ClarityConfig {
-    mode: 'instant' | 'confirmation';
-    useExternalLLM: boolean;
     geminiApiKey: string;
 }
 
@@ -16,8 +14,6 @@ export function getConfig(): ClarityConfig {
     const config = vscode.workspace.getConfiguration('clarity');
     
     return {
-        mode: config.get<'instant' | 'confirmation'>('mode', 'confirmation'),
-        useExternalLLM: config.get<boolean>('useExternalLLM', true),
         geminiApiKey: config.get<string>('geminiApiKey', 'AIzaSyBgY5kVoX7hzMi4PERtkmMT8KtnIj-Hzt0')
     };
 }
@@ -31,12 +27,8 @@ export async function updateConfig(key: keyof ClarityConfig, value: any): Promis
 }
 
 /**
- * Validates if the current configuration is valid for external LLM usage
+ * Validates if the Gemini API key is configured
  */
-export function validateExternalLLMConfig(config: ClarityConfig): boolean {
-    if (!config.useExternalLLM) {
-        return true; // No validation needed if not using external LLM
-    }
-    
+export function validateApiKey(config: ClarityConfig): boolean {
     return config.geminiApiKey.trim() !== '';
 }

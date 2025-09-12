@@ -149,6 +149,26 @@ ClarityAI: Enhances to detailed specification
 Copilot: Creates professional, responsive website with best practices
 ```
 
+## 💸 Don't Worry, We're Not Spending Your Money! 
+
+**🤑 The Good News**: When you chat with `@clarity`, we're NOT burning through your expensive Claude 4 or GPT-4 credits!
+
+**🎭 Here's the Comedy:**
+- **You**: "@clarity help me code"
+- **Your Wallet**: 😴 *Still sleeping peacefully*
+- **ClarityAI**: *Uses our own AI magic* ✨
+- **Your Premium Models**: 🛋️ *Chilling on the couch, completely untouched*
+
+**💰 Cost Breakdown (The Truth):**
+```
+@clarity enhance my prompt = ~$0.001 (our treat!)
+Click "Send to Copilot" = Uses YOUR subscription (but worth it!)
+```
+
+**🎪 Fun Fact**: ClarityAI is like having a professional prompt writer who works for peanuts, so you can save your premium AI budget for the *real* heavy lifting! We enhance, you decide when to splurge on the fancy stuff. 
+
+*Translation: Chat with ClarityAI all day long without guilt! 🎉*
+
 ## 🔧 Commands
 
 | Command | Description |

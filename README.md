@@ -1,15 +1,22 @@
-# Clarity - Prompt Improver for Copilot
+# ClarityAI - Intelligent Prompt Enhancement for VS Code
 
-**Clarity** is a VS Code extension that automatically improves your prompts by fixing grammar, spelling, and clarity before sending them to GitHub Copilot Chat. Get better AI responses with clearer, more professional prompts.
+**ClarityAI** is a VS Code ex## ⚙️ Configuration
+
+| Setting | Description | Default | Required |
+|---------|-------------|---------|----------|
+| `clarity.geminiApiKey` | Your API key for AI enhancement | *(empty)* | Yes |
+
+*Note: ClarityAI uses advanced AI technology to enhance your prompts. An API key is required for the enhancement service.* that transforms your simple prompts into professional, detailed specifications using advanced AI technology. Get better results from GitHub Copilot Chat with enhanced, structured prompts.
 
 ## ✨ Features
 
-- **🚀 Two Operation Modes**: Choose between Instant and Confirmation modes
-- **🤖 AI-Powered Enhancement**: Uses Google Gemini 2.0 Flash for intelligent prompt improvement
+- **🤖 AI-Powered Enhancement**: Advanced AI technology for intelligent prompt improvement
 - **📝 Grammar & Spelling Correction**: Automatically fixes typos and grammatical errors
-- **🎯 Clarity Enhancement**: Transforms vague prompts into detailed, actionable specifications
+- **🎯 Smart Enhancement**: Transforms vague prompts into detailed, actionable specifications
 - **🔗 Seamless Copilot Integration**: Works directly with GitHub Copilot Chat
 - **⚡ One-Click Operation**: Simple `@clarity` command in VS Code Chat
+- **🔄 Context-Aware Follow-ups**: Smart suggestions based on your enhanced prompts
+- **✂️ Flexible Options**: Add detail, simplify, or restructure your prompts
 
 ## 🎮 How to Use @clarity
 
@@ -21,30 +28,25 @@
    @clarity fix my authentication bug
    @clarity explain how React hooks work
    ```
-3. **Get improved prompts** and choose your preferred mode
+3. **Get enhanced prompts** with action buttons and smart follow-ups
 
-### 🔄 Two Operation Modes
+### 🔄 Operation Modes
 
-#### **Instant Mode** ⚡
-- Automatically improves your prompt and sends it directly to Copilot
-- Perfect for quick, seamless workflow
-- Enable via: `Clarity: Switch to Instant Mode` command
+#### **Confirmation Mode** ✅ (Current)
+- Shows the enhanced prompt with action buttons
+- **"🤖 Send to Copilot"** - Forwards clean prompt to Copilot Chat
+- **"📋 Copy Prompt"** - Copies enhanced prompt to clipboard
+- **Smart Follow-ups** - Context-aware suggestions for further enhancement
 
-#### **Confirmation Mode** ✅ (Default)
-- Shows the improved prompt with action buttons
-- **"Send to Copilot"** - Forwards to Copilot Chat
-- **"Copy to Clipboard"** - Copies for manual use
-- More control over the process
+#### **Instant Mode** ⚡ (Soon)
+- Coming soon: Automatically enhance and send prompts directly to Copilot
+- Perfect for seamless, rapid workflow
 
 ## 📸 Screenshots
 
-### Confirmation Mode in Action
-![Confirmation Mode](screenshots/confirmation-mode.png)
-*Shows improved prompt with "Send to Copilot" and "Copy" buttons*
-
-### Instant Mode in Action  
-![Instant Mode](screenshots/instant-mode.png)
-*Automatically forwards enhanced prompts to Copilot*
+### ClarityAI in Action
+![ClarityAI Enhancement](screenshots/clarity-mode.png)
+*Shows enhanced prompt with "Send to Copilot" and "Copy" buttons plus smart follow-ups*
 
 ## 🛠️ Installation & Setup
 
@@ -53,18 +55,19 @@
 # Install from VSIX
 code --install-extension clarity-0.0.1.vsix
 
-# Or search "Clarity" in VS Code Extensions
+# Or search "ClarityAI" in VS Code Extensions
 ```
 
 ### 2. Configure API Key
 1. Open VS Code Settings (`Ctrl+,`)
 2. Search for "clarity"
-3. Add your Google Gemini API key to `clarity.geminiApiKey`
+3. Add your API key to `clarity.geminiApiKey`
 4. Get your API key from: [Google AI Studio](https://aistudio.google.com/app/apikey)
 
-### 3. Choose Your Mode
-- **Default**: Confirmation Mode (shows buttons)
-- **Switch to Instant**: Run `Clarity: Switch to Instant Mode` command
+### 3. Start Using
+- Open VS Code Chat Panel
+- Type `@clarity` followed by your prompt
+- Enjoy enhanced prompts with smart follow-ups!
 
 ## ⚙️ Configuration
 
@@ -78,36 +81,37 @@ code --install-extension clarity-0.0.1.vsix
 
 ### Before & After Enhancement
 
-| **Your Input** | **Clarity's Enhancement** |
-|----------------|---------------------------|
+| **Your Input** | **ClarityAI's Enhancement** |
+|----------------|-----------------------------|
 | `make a website` | "Create a modern, responsive website with HTML5 semantic structure, CSS Grid/Flexbox layout, mobile-first design, accessibility features, clean navigation, and SEO optimization" |
 | `fix bug` | "Debug and fix the authentication bug by analyzing error logs, checking token validation, verifying API endpoints, and implementing proper error handling" |
 | `explain hooks` | "Provide a comprehensive explanation of React Hooks including useState, useEffect, custom hooks, rules of hooks, and practical examples with best practices" |
 
 ### Workflow Examples
 
-#### Instant Mode Flow:
+#### Current Workflow:
 ```
 You: @clarity make a REST API
 ↓
-Clarity: [Enhances prompt automatically]
+ClarityAI: [Shows enhanced prompt with buttons]
+↓
+You: Click "🤖 Send to Copilot" 
 ↓
 Copilot: [Receives detailed API specification]
 ↓
 Result: Complete API implementation
 ```
 
-#### Confirmation Mode Flow:
+#### Smart Follow-ups:
 ```
 You: @clarity optimize performance
 ↓  
-Clarity: Shows enhanced prompt with buttons
-↓
-You: Click "Send to Copilot" 
-↓
-Copilot: [Receives detailed optimization guide]
-↓
-Result: Comprehensive performance improvements
+ClarityAI: Shows enhanced prompt + follow-up suggestions:
+  🎯 Add More Detail
+  🔰 Make Beginner-Friendly  
+  ✂️ Simplify Prompt
+  ⚙️ Add Constraints
+  📋 Make Step-by-Step
 ```
 
 ## 🏗️ Architecture
@@ -115,7 +119,7 @@ Result: Comprehensive performance improvements
 ```
 src/
 ├── extension.ts     # Main extension entry point & chat participant
-├── llmClient.ts     # Google Gemini 2.0 Flash API integration
+├── llmClient.ts     # AI API integration and response cleaning
 ├── autocorrect.ts   # Core prompt enhancement logic
 ├── config.ts        # Settings and configuration management
 └── forward.ts       # Copilot integration and command handling
@@ -127,42 +131,46 @@ src/
 - **⏱️ Time Saving**: No more writing long, detailed prompts manually  
 - **🧠 Expert Knowledge**: Leverage domain expertise automatically
 - **🔄 Seamless Workflow**: Integrates directly with your existing Copilot workflow
-- **🎛️ Flexible Control**: Choose between instant or confirmation modes
+- **🤖 Smart Follow-ups**: Context-aware suggestions for prompt refinement
+- **🧹 Clean Integration**: Removes AI commentary, sends pure prompts to Copilot
 
-## 💡 Why Use Clarity?
+## 💡 Why Use ClarityAI?
 
-**Without Clarity:**
+**Without ClarityAI:**
 ```
 You: "make a website"
 Copilot: Creates basic HTML page with minimal styling
 ```
 
-**With Clarity:**
+**With ClarityAI:**
 ```
 You: "@clarity make a website"
-Clarity: Enhances to detailed specification
+ClarityAI: Enhances to detailed specification
 Copilot: Creates professional, responsive website with best practices
 ```
 
 ## 🔧 Commands
 
 | Command | Description |
-|---------|-------------|
-| `Clarity: Switch to Instant Mode` | Auto-forward enhanced prompts to Copilot |
-| `Clarity: Switch to Confirmation Mode` | Show buttons for manual control |
+|---------|--------------|
+| `@clarity [prompt]` | Enhance your prompt with AI and get action buttons |
+| `clarity.forwardToCopilot` | Send enhanced prompt to Copilot (triggered by button) |
+| `clarity.copyPrompt` | Copy enhanced prompt to clipboard (triggered by button) |
+
+*Additional commands and instant mode coming soon!*
 
 ## 📋 Requirements
 
 - VS Code 1.90.0 or higher
 - GitHub Copilot extension (for forwarding functionality)
-- Google Gemini API key (free tier available)
+- API key for AI enhancement service (free tier available)
 
 ## 🤝 Contributing
 
 Contributions are welcome! This extension is built with:
 - **TypeScript** for type safety
 - **VS Code Extension API** for chat participants
-- **Google Gemini 2.0 Flash** for AI enhancement
+- **Advanced AI Technology** for intelligent enhancement
 
 ## 📄 License
 
@@ -171,11 +179,11 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## 🔗 Links
 
 - [GitHub Repository](https://github.com/Attafii/ClarityAI)
-- [Get Gemini API Key](https://aistudio.google.com/app/apikey)
+- [Get API Key](https://aistudio.google.com/app/apikey)
 - [VS Code Extension Guidelines](https://code.visualstudio.com/api)
 
 ---
 
-**✨ Transform your prompts from vague to expert-level with Clarity!**
+**✨ Transform your prompts from vague to expert-level with ClarityAI!**
 
 *Made with ❤️ for the VS Code community*

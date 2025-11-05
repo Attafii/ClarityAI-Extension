@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { DEFAULT_CONFIG } from './defaultConfig';
 
 /**
  * Configuration interface for Clarity extension
@@ -13,8 +14,11 @@ export interface ClarityConfig {
 export function getConfig(): ClarityConfig {
     const config = vscode.workspace.getConfiguration('clarity');
     
+    // Priority: User setting > Default API key
+    const userApiKey = config.get<string>('geminiApiKey', '');
+    
     return {
-        geminiApiKey: config.get<string>('geminiApiKey', 'AIzaSyBgY5kVoX7hzMi4PERtkmMT8KtnIj-Hzt0')
+        geminiApiKey: userApiKey || DEFAULT_CONFIG.GEMINI_API_KEY
     };
 }
 

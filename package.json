@@ -53,8 +53,8 @@
       "properties": {
         "clarity.geminiApiKey": {
           "type": "string",
-          "default": "AIzaSyDxIfZIb2q_5vrrYPS702rjPnxn2gW9Tec",
-          "description": "Google Gemini API key for prompt enhancement"
+          "default": "",
+          "description": "Your Google Gemini API key for prompt enhancement (required). Get yours at: https://aistudio.google.com/app/apikey"
         }
       }
     }
@@ -74,6 +74,7 @@
   },
   "dependencies": {
     "@types/node-fetch": "^2.6.11",
+    "dotenv": "^17.2.2",
     "node-fetch": "^2.7.0"
   }
 }

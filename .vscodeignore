@@ -12,3 +12,4 @@ coverage
 **/*.ts
 node_modules/**
 out/test/**
+.env

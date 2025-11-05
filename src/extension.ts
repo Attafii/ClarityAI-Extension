@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getConfig } from './config';
-import { improvePrompt } from './autocorrect';
+import { improvePrompt, ConversationContext } from './autocorrect';
 import { forwardToCopilot, debugAvailableCommands } from './forward';
 
 /**
@@ -90,11 +90,92 @@ function registerChatParticipant(context: vscode.ExtensionContext) {
 }
 
 /**
+ * Extracts conversation context including todos and previous messages
+ */
+function extractConversationContext(context: vscode.ChatContext): ConversationContext {
+    const previousMessages: string[] = [];
+    const todos: string[] = [];
+    const projectContext: string[] = [];
+    const lastActions: string[] = [];
+
+    // Analyze conversation history
+    context.history.forEach((turn) => {
+        if (turn instanceof vscode.ChatRequestTurn) {
+            // User messages - extract any project context or requirements
+            const message = turn.prompt;
+            previousMessages.push(message);
+            
+            // Look for project indicators
+            if (message.toLowerCase().includes('project') || 
+                message.toLowerCase().includes('app') || 
+                message.toLowerCase().includes('website') ||
+                message.toLowerCase().includes('feature')) {
+                projectContext.push(message);
+            }
+        } else if (turn instanceof vscode.ChatResponseTurn) {
+            // Assistant responses - extract todos and action items
+            turn.response.forEach((part) => {
+                if (part instanceof vscode.ChatResponseMarkdownPart) {
+                    const content = part.value.value;
+                    
+                    // Extract GitHub Copilot style todos
+                    const copilotTodos = content.match(/[-*]\s*\[.\]\s*.*$/gm) || [];
+                    todos.push(...copilotTodos);
+                    
+                    // Extract agent-style todo lists (like mine)
+                    const agentTodoSections = content.match(/# Todo List[\s\S]*?(?=\n#|$)/g) || [];
+                    agentTodoSections.forEach(section => {
+                        // Extract individual todo items from agent format
+                        const agentTodos = section.match(/- \[[x\s-]\] .+/g) || [];
+                        todos.push(...agentTodos);
+                        
+                        // Also extract the descriptive text under each todo
+                        const todoDescriptions = section.match(/  - .+/g) || [];
+                        lastActions.push(...todoDescriptions);
+                    });
+                    
+                    // Extract simple bullet point todos
+                    const simpleTodos = content.match(/^[-*]\s*(?!\[)\w.+$/gm) || [];
+                    todos.push(...simpleTodos.slice(0, 5));
+                    
+                    // Extract numbered action items
+                    const actionMatches = content.match(/^\d+\.\s+.*$/gm) || [];
+                    lastActions.push(...actionMatches);
+                    
+                    // Extract planning steps and implementation details
+                    const planningSteps = content.match(/^(\d+\.|\*\*Step \d+\*\*|\*\*\d+\.\*\*).+/gm) || [];
+                    lastActions.push(...planningSteps.slice(0, 3));
+                    
+                    // Extract agent's structured responses (What I've Added, Changes Made, etc.)
+                    const structuredSections = content.match(/^## .+|^\*\*[^*]+\*\*:/gm) || [];
+                    lastActions.push(...structuredSections.slice(0, 3));
+                    
+                    // Extract ✅ completed items and 🔄 in-progress items
+                    const statusItems = content.match(/[✅🔄❌⚠️🎯📝🚀].+/gm) || [];
+                    lastActions.push(...statusItems.slice(0, 5));
+                    
+                    // Extract bullet points that might be tasks
+                    const bulletMatches = content.match(/^[-*]\s+(?!.*\[.\]).*$/gm) || [];
+                    lastActions.push(...bulletMatches.slice(0, 3)); // Reduced to avoid noise
+                }
+            });
+        }
+    });
+
+    return {
+        previousMessages: previousMessages.slice(-3), // Last 3 user messages
+        todos: todos.slice(-10), // Last 10 todos
+        projectContext: projectContext.slice(-2), // Last 2 project contexts
+        lastActions: lastActions.slice(-5) // Last 5 actions
+    };
+}
+
+/**
  * Handles incoming chat requests to @clarity
  */
 async function handleChatRequest(
     request: vscode.ChatRequest,
-    _context: vscode.ChatContext,
+    context: vscode.ChatContext,
     stream: vscode.ChatResponseStream,
     _token: vscode.CancellationToken
 ): Promise<vscode.ChatResult> {
@@ -108,22 +189,65 @@ async function handleChatRequest(
             return { metadata: { command: 'clarity', error: 'empty_prompt' } };
         }
 
+        // Extract conversation context and todos for better enhancement
+        const conversationContext = extractConversationContext(context);
+        
         // Get current configuration
         const config = getConfig();
         
+        // Validate API key exists
+        if (!config.geminiApiKey || config.geminiApiKey.trim() === '') {
+            stream.markdown('❌ **No API key configured!** Please set your Gemini API key in settings.\n\n');
+            stream.markdown('Go to Settings → Search "clarity" → Add your API key from [Google AI Studio](https://aistudio.google.com/app/apikey)');
+            return { metadata: { command: 'clarity', error: 'no_api_key' } };
+        }
+        
         // Debug configuration
         console.log('🔧 Clarity Configuration:', {
-            hasApiKey: !!config.geminiApiKey
+            hasApiKey: !!config.geminiApiKey,
+            apiKeyLength: config.geminiApiKey.length,
+            apiKeyPrefix: config.geminiApiKey.substring(0, 10) + '...',
+            contextMessages: conversationContext.previousMessages.length,
+            foundTodos: conversationContext.todos.length,
+            foundActions: conversationContext.lastActions.length,
+            foundProjectContext: conversationContext.projectContext.length
         });
+        
+        // Debug: Log detected context for troubleshooting
+        if (conversationContext.todos.length > 0) {
+            console.log('📋 Detected todos:', conversationContext.todos);
+        }
+        if (conversationContext.lastActions.length > 0) {
+            console.log('🎯 Detected actions:', conversationContext.lastActions);
+        }
 
-        // Show processing indicator
-        stream.markdown('🤖 **ClarityAI is currently preparing your upgraded prompt...**\n\n');
+        // Show processing indicator with context info
+        const contextCount = conversationContext.todos.length + conversationContext.lastActions.length + conversationContext.projectContext.length;
+        if (contextCount > 0) {
+            stream.markdown(`� **ClarityAI is analyzing ${contextCount} context items (todos, actions, project info) and enhancing your prompt...**\n\n`);
+        } else {
+            stream.markdown('🤖 **ClarityAI is enhancing your prompt...**\n\n');
+        }
         
-        // Improve the prompt using Gemini 2.0 Flash
-        const improvedPrompt = await improvePrompt(userPrompt);
+        // Improve the prompt using context-aware enhancement
+        let improvedPrompt: string;
+        let enhancementFailed = false;
         
-        // Show success message
-        stream.markdown('✅ **ClarityAI enhancement complete!**\n\n');
+        try {
+            improvedPrompt = await improvePrompt(userPrompt, conversationContext);
+        } catch (error) {
+            enhancementFailed = true;
+            improvedPrompt = userPrompt;
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            stream.markdown(`⚠️ **AI enhancement failed:** ${errorMessage}\n\n`);
+            stream.markdown('Using basic typo corrections only.\n\n');
+            console.error('Enhancement error:', error);
+        }
+        
+        if (!enhancementFailed) {
+            // Show success message
+            stream.markdown('✅ **ClarityAI enhancement complete!**\n\n');
+        }
         
         // Check if any improvements were made
         if (improvedPrompt === userPrompt) {

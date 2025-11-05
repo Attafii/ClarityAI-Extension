@@ -42,17 +42,7 @@ export async function forwardToCopilot(improvedPrompt: string): Promise<void> {
             `@copilot ${improvedPrompt}`
         );
         
-        // Attempt to submit by simulating an Enter keypress in the chat input
-        try {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            await vscode.commands.executeCommand('type', { text: '\n' });
-            console.log('✅ Successfully inserted prompt and submitted via simulated Enter');
-            return;
-        } catch (sendError) {
-            console.warn('Simulated Enter submit failed, leaving prompt in input for manual send:', sendError);
-            console.log('✅ Successfully inserted prompt into Copilot chat (not auto-submitted)');
-            return;
-        }
+        console.log('✅ Successfully inserted prompt into Copilot chat');
         return;
         
     } catch (error) {

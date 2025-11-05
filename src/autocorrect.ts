@@ -114,32 +114,37 @@ export interface StructuredPrompt {
 }
 
 /**
- * Improves a prompt by applying local autocorrect and Gemini 2.0 Flash enhancement
- * Uses a structured approach with universal prompt formula
- * @param prompt The original user prompt
- * @returns The improved prompt enhanced by Gemini 2.0 Flash
+ * Interface for conversation context analysis
  */
-export async function improvePrompt(prompt: string): Promise<string> {
+export interface ConversationContext {
+    previousMessages: string[];
+    todos: string[];
+    projectContext: string[];
+    lastActions: string[];
+}
+
+/**
+ * Improves a prompt by applying local autocorrect and AI enhancement with conversation context
+ * Uses a structured approach with universal prompt formula and conversation history
+ * @param prompt The original user prompt
+ * @param context Optional conversation context for better enhancement
+ * @returns The improved prompt enhanced with AI and context awareness
+ */
+export async function improvePrompt(prompt: string, context?: ConversationContext): Promise<string> {
     let improvedPrompt = prompt;
     
     // Step 1: Apply basic local corrections (typos and grammar)
     improvedPrompt = applyLocalCorrections(improvedPrompt);
     
-    // Step 2: Use Gemini 2.0 Flash for intelligent enhancement
-    try {
-        console.log('🤖 Sending prompt to Gemini 2.0 Flash for intelligent enhancement...');
-        const geminiEnhanced = await callExternalLLM(improvedPrompt);
-        if (geminiEnhanced && geminiEnhanced.trim() !== '') {
-            console.log('✅ Received enhanced prompt from Gemini');
-            return geminiEnhanced.trim();
-        }
-    } catch (error) {
-        console.warn('⚠️ Gemini API failed, falling back to local corrections:', error);
-        // Continue with local processing below
+    // Step 2: Use AI for intelligent enhancement with context
+    console.log('🤖 Sending prompt for context-aware enhancement...');
+    const enhancedPrompt = await callExternalLLM(improvedPrompt, context);
+    if (enhancedPrompt && enhancedPrompt.trim() !== '') {
+        console.log('✅ Received context-aware enhanced prompt:', enhancedPrompt.substring(0, 100));
+        return enhancedPrompt.trim();
+    } else {
+        throw new Error('AI returned empty response');
     }
-    
-    // Step 3: Fallback - return with basic corrections only
-    return improvedPrompt.trim();
 }
 
 /**

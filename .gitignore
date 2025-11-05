@@ -6,3 +6,4 @@ node_modules
 *.log
 .env
 .DS_Store
+src/defaultConfig.ts

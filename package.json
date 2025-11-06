@@ -1,9 +1,9 @@
 {
-  "name": "clarity",
-  "displayName": "Clarity - Prompt Improver for Copilot",
+  "name": "clarityai",
+  "displayName": "ClarityAI - Prompt Improver for Copilot",
   "description": "Improves developer prompts by fixing grammar, spelling, and clarity before sending to Copilot",
-  "version": "0.0.1",
-  "publisher": "attafii",
+  "version": "0.0.3",
+  "publisher": "AhmedAttafii",
   "author": "Ahmed Attafi",
   "license": "MIT",
   "icon": "img/ClarityAI-logo.png",
@@ -20,7 +20,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Attafii/ClarityAI.git"
+    "url": "https://github.com/Attafii/ClarityAI-Extension.git"
   },
   "engines": {
     "vscode": "^1.90.0"
@@ -55,6 +55,16 @@
           "type": "string",
           "default": "",
           "description": "Your Google Gemini API key for prompt enhancement (required). Get yours at: https://aistudio.google.com/app/apikey"
+        },
+        "clarity.autoInjectContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically inject project context (framework, dependencies, current file) into prompts"
+        },
+        "clarity.showDiffView": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show detailed comparison between original and enhanced prompts"
         }
       }
     }

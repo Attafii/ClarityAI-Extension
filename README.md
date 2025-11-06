@@ -1,22 +1,18 @@
 # ClarityAI - Intelligent Prompt Enhancement for VS Code
 
-**ClarityAI** is a VS Code ex## ⚙️ Configuration
-
-| Setting | Description | Default | Required |
-|---------|-------------|---------|----------|
-| `clarity.geminiApiKey` | Your API key for AI enhancement | *(empty)* | Yes |
-
-*Note: ClarityAI uses advanced AI technology to enhance your prompts. An API key is required for the enhancement service.* that transforms your simple prompts into professional, detailed specifications using advanced AI technology. Get better results from GitHub Copilot Chat with enhanced, structured prompts.
+**ClarityAI** is a powerful VS Code extension that transforms your simple prompts into professional, detailed specifications using advanced AI technology. Get better results from GitHub Copilot Chat with enhanced, structured prompts.
 
 ## ✨ Features
 
 - **🤖 AI-Powered Enhancement**: Advanced AI technology for intelligent prompt improvement
 - **📝 Grammar & Spelling Correction**: Automatically fixes typos and grammatical errors
 - **🎯 Smart Enhancement**: Transforms vague prompts into detailed, actionable specifications
+- **📚 Prompt Templates**: 12+ pre-built templates for common tasks (REST APIs, React components, tests, etc.)
+- **🔍 Code Context Auto-Injection**: Automatically detects your project framework, dependencies, and current file context
+- **📊 Diff View**: Visual comparison showing exactly what was improved and why
 - **🔗 Seamless Copilot Integration**: Works directly with GitHub Copilot Chat
 - **⚡ One-Click Operation**: Simple `@clarity` command in VS Code Chat
 - **🔄 Context-Aware Follow-ups**: Smart suggestions based on your enhanced prompts
-- **✂️ Flexible Options**: Add detail, simplify, or restructure your prompts
 
 ## 🎮 How to Use @clarity
 
@@ -30,17 +26,69 @@
    ```
 3. **Get enhanced prompts** with action buttons and smart follow-ups
 
-### 🔄 Operation Modes
+### 📚 Using Prompt Templates
 
-#### **Confirmation Mode** ✅ (Current)
-- Shows the enhanced prompt with action buttons
-- **"🤖 Send to Copilot"** - Forwards clean prompt to Copilot Chat
-- **"📋 Copy Prompt"** - Copies enhanced prompt to clipboard
-- **Smart Follow-ups** - Context-aware suggestions for further enhancement
+List all available templates:
+```
+@clarity templates
+```
 
-#### **Instant Mode** ⚡ (Soon)
-- Coming soon: Automatically enhance and send prompts directly to Copilot
-- Perfect for seamless, rapid workflow
+Use a template:
+```
+@clarity template:rest-api
+@clarity t:react-component
+@clarity template:unit-tests
+```
+
+Templates with parameters:
+```
+@clarity template:rest-api resource=users method=POST
+@clarity template:form-component formPurpose="user registration" fields="name,email,password"
+```
+
+**Available Template Categories:**
+- 🌐 **API Development**: REST endpoints, GraphQL resolvers
+- 🎨 **UI Components**: React components, forms with validation
+- ✅ **Testing**: Unit tests, integration tests
+- 💾 **Database**: Schema design, migrations
+- 🏗️ **Architecture**: Clean architecture modules
+- 🐛 **Debugging**: Error analysis and fixes
+- 📝 **General**: Code refactoring, documentation
+
+### 🔍 Automatic Context Injection
+
+ClarityAI automatically detects and includes:
+- **Current file** language and path
+- **Framework** (Next.js, React, Vue, Express, NestJS, etc.)
+- **Key dependencies** (Tailwind, Prisma, tRPC, etc.)
+- **TypeScript** usage
+- **Test framework** (Jest, Vitest, etc.)
+- **Build tool** (Vite, Webpack, etc.)
+
+Example prompt:
+```
+@clarity create a user dashboard
+```
+
+Becomes (with auto-injected context):
+```
+create a user dashboard
+
+📋 Project Context:
+- Working in: src/pages/dashboard.tsx (typescript)
+- Tech stack: Next.js 15, TypeScript
+- Using: tailwindcss, prisma, trpc
+- Build: Vite
+```
+
+Then AI enhances it further with specific implementation details!
+
+### 📊 Diff View
+
+After enhancement, ClarityAI shows:
+- **Improvements metrics**: Words added, structure improvements, specificity gains
+- **Before/After comparison**: Side-by-side view
+- **Key additions**: What was specifically added (TypeScript types, error handling, accessibility, etc.)
 
 ## 📸 Screenshots
 
@@ -53,29 +101,31 @@
 ### 1. Install the Extension
 ```bash
 # Install from VSIX
-code --install-extension clarity-0.0.1.vsix
+code --install-extension clarityai-0.0.2.vsix
 
-# Or search "ClarityAI" in VS Code Extensions
+# Or search "ClarityAI" in VS Code Marketplace
 ```
 
 ### 2. Configure API Key
 1. Open VS Code Settings (`Ctrl+,`)
 2. Search for "clarity"
 3. Add your API key to `clarity.geminiApiKey`
-4. Get your API key from: [Google AI Studio](https://aistudio.google.com/app/apikey)
+4. Get your free API key from: [Google AI Studio](https://aistudio.google.com/app/apikey)
 
 ### 3. Start Using
-- Open VS Code Chat Panel
+- Open VS Code Chat Panel (Ctrl+Shift+I)
 - Type `@clarity` followed by your prompt
-- Enjoy enhanced prompts with smart follow-ups!
+- Or use `@clarity templates` to see all available templates!
 
 ## ⚙️ Configuration
 
-| Setting | Description | Default | Options |
-|---------|-------------|---------|---------|
-| `clarity.mode` | How Clarity handles improved prompts | `confirmation` | `instant`, `confirmation` |
-| `clarity.useExternalLLM` | Use Gemini API for enhancement | `true` | `true`, `false` |
-| `clarity.geminiApiKey` | Your Google Gemini API key | *(required)* | Your API key |
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `clarity.geminiApiKey` | Your Google Gemini API key (required) | *(empty)* |
+| `clarity.autoInjectContext` | Auto-inject project context into prompts | `true` |
+| `clarity.showDiffView` | Show detailed before/after comparison | `true` |
+
+**Note**: ClarityAI uses Google Gemini 2.0 Flash API for enhancement. Only your prompts are sent, never your actual code.
 
 ## 📝 Examples
 

@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
 function registerChatParticipant(context: vscode.ExtensionContext) {
     // Create and register the chat participant
     clarityParticipant = vscode.chat.createChatParticipant('clarity', handleChatRequest);
-    clarityParticipant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
+    clarityParticipant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'img', 'ClarityAI-logo.png');
     clarityParticipant.followupProvider = {
         provideFollowups(_result: vscode.ChatResult, _context: vscode.ChatContext, _token: vscode.CancellationToken) {
             if (!lastEnhancedPrompt) {
@@ -176,44 +176,124 @@ function extractConversationContext(context: vscode.ChatContext): ConversationCo
  * Show a visual diff between original and enhanced prompts
  */
 function showDiffView(stream: vscode.ChatResponseStream, original: string, enhanced: string) {
-    stream.markdown('## 📊 Prompt Comparison\n\n');
+    // Check if diff view is enabled
+    const config = vscode.workspace.getConfiguration('clarity');
+    const showDiff = config.get<boolean>('showDiffView', true);
+    
+    if (!showDiff) {
+        // Simple view without detailed comparison
+        stream.markdown('✨ **Enhanced Prompt:**\n\n');
+        stream.markdown('```\n' + enhanced + '\n```\n\n');
+        return;
+    }
+    
+    // Full diff view with educational insights
+    stream.markdown('## 📊 What ClarityAI Improved\n\n');
     
     // Calculate improvement metrics
     const stats = calculateImprovementStats(original, enhanced);
     
-    // Show metrics
-    stream.markdown('### 📈 Improvements:\n\n');
+    // Show quality score
+    const qualityScore = calculateQualityScore(stats);
+    stream.markdown(`### 🎯 Prompt Quality Score: **${qualityScore}/10**\n\n`);
+    
+    if (qualityScore >= 8) {
+        stream.markdown('🌟 **Excellent!** This prompt is highly detailed and specific.\n\n');
+    } else if (qualityScore >= 6) {
+        stream.markdown('✅ **Good!** Solid improvements for better AI responses.\n\n');
+    } else {
+        stream.markdown('📝 **Enhanced!** Added important details and structure.\n\n');
+    }
+    
+    // Show metrics with educational explanations
+    stream.markdown('### 📈 Improvements Made:\n\n');
+    
     if (stats.wordsAdded > 0) {
-        stream.markdown(`- ✅ **${stats.wordsAdded}** words added for clarity\n`);
+        stream.markdown(`- ✅ **+${stats.wordsAdded} words** - More context helps AI understand exactly what you need\n`);
     }
     if (stats.structureAdded) {
-        stream.markdown(`- 📋 **Structure** added (headings, bullet points)\n`);
+        stream.markdown(`- 📋 **Structure added** - Organized requirements make responses more accurate\n`);
     }
     if (stats.specificityAdded) {
-        stream.markdown(`- 🎯 **Specificity** improved (types, requirements, examples)\n`);
+        stream.markdown(`- 🎯 **Specificity improved** - Detailed requirements reduce back-and-forth\n`);
     }
     if (stats.lengthIncrease > 50) {
-        stream.markdown(`- 📝 **${stats.lengthIncrease}%** more detailed\n`);
+        stream.markdown(`- 📝 **${stats.lengthIncrease}% more detailed** - Comprehensive prompts = better code\n`);
     }
     
-    stream.markdown('\n---\n\n');
-    
-    // Show before/after
-    stream.markdown('### Before (Original):\n\n');
-    stream.markdown('```\n' + original + '\n```\n\n');
-    
-    stream.markdown('### After (Enhanced):\n\n');
-    stream.markdown('```\n' + enhanced + '\n```\n\n');
-    
-    // Highlight key additions if possible
+    // Highlight key additions with explanations
     const keyAdditions = extractKeyAdditions(original, enhanced);
     if (keyAdditions.length > 0) {
-        stream.markdown('### 🔑 Key Additions:\n\n');
+        stream.markdown('\n### 🔑 Key Additions (Why They Matter):\n\n');
+        const explanations: Record<string, string> = {
+            'TypeScript types specified': 'Type safety prevents bugs and improves code quality',
+            'Error handling mentioned': 'Robust error handling makes production-ready code',
+            'Validation requirements': 'Input validation prevents security vulnerabilities',
+            'Testing considerations': 'Tests ensure code reliability and catch regressions',
+            'Accessibility requirements': 'A11y makes your app usable for everyone',
+            'Responsive design': 'Mobile-first approach reaches all users',
+            'Documentation requirements': 'Good docs help future maintainers',
+            'Performance considerations': 'Optimized code provides better UX'
+        };
+        
         keyAdditions.forEach(addition => {
-            stream.markdown(`- ${addition}\n`);
+            const explanation = explanations[addition] || 'Improves code quality';
+            stream.markdown(`- **${addition}**\n  - *${explanation}*\n`);
         });
         stream.markdown('\n');
     }
+    
+    stream.markdown('---\n\n');
+    
+    // Show side-by-side comparison
+    stream.markdown('### 📝 Before → After Comparison\n\n');
+    
+    // Show original (truncated if too long)
+    stream.markdown('**Your Original Prompt:**\n\n');
+    const originalDisplay = original.length > 200 ? original.substring(0, 200) + '...' : original;
+    stream.markdown(`> ${originalDisplay}\n\n`);
+    
+    // Show enhanced
+    stream.markdown('**ClarityAI Enhanced Version:**\n\n');
+    stream.markdown('```\n' + enhanced + '\n```\n\n');
+    
+    // Educational tip
+    stream.markdown('💡 **Pro Tip:** ' + getRandomTip() + '\n\n');
+}
+
+/**
+ * Calculate quality score from stats
+ */
+function calculateQualityScore(stats: any): number {
+    let score = 5; // Base score
+    
+    if (stats.wordsAdded > 20) score += 2;
+    else if (stats.wordsAdded > 10) score += 1;
+    
+    if (stats.structureAdded) score += 1;
+    if (stats.specificityAdded) score += 1;
+    
+    if (stats.lengthIncrease > 100) score += 1;
+    
+    return Math.min(10, score);
+}
+
+/**
+ * Get random educational tip
+ */
+function getRandomTip(): string {
+    const tips = [
+        'Specific prompts with requirements lists get better results than vague requests',
+        'Including tech stack details (React, TypeScript) helps AI generate compatible code',
+        'Mentioning error handling and edge cases leads to production-ready code',
+        'Adding "with tests" or "with comments" improves code quality significantly',
+        'Structured prompts with sections (REQUIREMENTS, FEATURES) organize AI responses better',
+        'Specifying file structure helps AI generate organized, maintainable code',
+        'Including accessibility requirements ensures your app works for everyone',
+        'Mentioning performance needs upfront prevents costly refactoring later'
+    ];
+    
+    return tips[Math.floor(Math.random() * tips.length)];
 }
 
 /**
@@ -469,7 +549,10 @@ async function handleChatRequest(
         lastEnhancedPrompt = improvedPrompt;
 
         // Show action buttons
-        stream.markdown('👆 **Choose an action:**\n\n');
+        stream.markdown('---\n\n');
+        stream.markdown('## 🎯 Quick Actions\n\n');
+        
+        // Primary actions
         stream.button({
             title: '🤖 Send to Copilot',
             command: 'clarity.forwardToCopilot',
@@ -479,6 +562,40 @@ async function handleChatRequest(
             title: '📋 Copy Prompt',
             command: 'clarity.copyPrompt',
             arguments: [improvedPrompt]
+        });
+        
+        stream.markdown('\n\n**Refine Further:**\n\n');
+        
+        // Refinement actions - these create new enhanced prompts
+        stream.button({
+            title: '🔍 Add More Details',
+            command: 'clarity.refinePrompt',
+            arguments: [improvedPrompt, 'detail']
+        });
+        stream.button({
+            title: '✂️ Simplify',
+            command: 'clarity.refinePrompt',
+            arguments: [improvedPrompt, 'simplify']
+        });
+        stream.button({
+            title: '📋 Step-by-Step',
+            command: 'clarity.refinePrompt',
+            arguments: [improvedPrompt, 'steps']
+        });
+        stream.button({
+            title: '🎓 Beginner-Friendly',
+            command: 'clarity.refinePrompt',
+            arguments: [improvedPrompt, 'beginner']
+        });
+        stream.button({
+            title: '⚡ Production-Ready',
+            command: 'clarity.refinePrompt',
+            arguments: [improvedPrompt, 'production']
+        });
+        stream.button({
+            title: '🧪 Add Tests',
+            command: 'clarity.refinePrompt',
+            arguments: [improvedPrompt, 'tests']
         });
 
         return { 
@@ -529,10 +646,48 @@ function registerCommands(context: vscode.ExtensionContext) {
         }
     });
 
+    // Command: Refine prompt with specific action
+    const refinePromptCommand = vscode.commands.registerCommand('clarity.refinePrompt', async (prompt: string, action: string) => {
+        try {
+            const refinementPrompts: Record<string, string> = {
+                'detail': `Make this prompt more detailed and specific:\n\n${prompt}`,
+                'simplify': `Simplify this prompt and make it more concise while keeping key requirements:\n\n${prompt}`,
+                'steps': `Break this into clear step-by-step instructions:\n\n${prompt}`,
+                'beginner': `Rewrite this prompt in beginner-friendly terms with explanations:\n\n${prompt}`,
+                'production': `Add production-ready requirements (error handling, testing, logging, security):\n\n${prompt}`,
+                'tests': `Add comprehensive testing requirements to this prompt:\n\n${prompt}`
+            };
+
+            const refinedRequest = refinementPrompts[action] || prompt;
+            
+            // Open chat and send the refinement request to @clarity
+            await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
+            await vscode.commands.executeCommand('workbench.action.chat.open', {
+                query: `@clarity ${refinedRequest}`
+            });
+            
+        } catch (error) {
+            // Fallback: copy to clipboard
+            const refinementPrompts: Record<string, string> = {
+                'detail': `Make this prompt more detailed and specific:\n\n${prompt}`,
+                'simplify': `Simplify this prompt:\n\n${prompt}`,
+                'steps': `Break this into steps:\n\n${prompt}`,
+                'beginner': `Make this beginner-friendly:\n\n${prompt}`,
+                'production': `Add production requirements:\n\n${prompt}`,
+                'tests': `Add testing requirements:\n\n${prompt}`
+            };
+            
+            await vscode.env.clipboard.writeText(refinementPrompts[action] || prompt);
+            vscode.window.showInformationMessage('📋 Refinement prompt copied! Paste in @clarity chat.');
+            console.error('Failed to auto-refine:', error);
+        }
+    });
+
     // Add commands to subscriptions for proper cleanup
     context.subscriptions.push(
         forwardToCopilotCommand,
-        copyPromptCommand
+        copyPromptCommand,
+        refinePromptCommand
     );
 }
 

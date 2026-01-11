@@ -93,3 +93,18 @@ ClarityAI is flexible. Go to **Settings (Ctrl+,)** and search for "Clarity" to c
 
 ---
 Made by developers, for developers. Because we all deserve better results from AI.
+
+## 🤝 Contributing
+
+ClarityAI is **open source** and built by the community for the community. We welcome contributions of all kinds!
+
+- **Add New Templates**: Have a prompt blueprint that works every time? Add it to our library.
+- **Improve Accuracy**: Help us refine the Complexity Analyzer or framework detection.
+- **Fix Bugs**: Found a glitch? Open an issue or submit a PR.
+- **Feedback**: Tell us how you're using ClarityAI.
+
+### Getting Started with Development
+
+1. Clone the repo: `git clone https://github.com/Attafii/ClarityAI-Extension.git`
+2. Install dependencies: `npm install`
+3. Launch the extension: Press `F5` in VS Code to open a new window with the extension loaded.

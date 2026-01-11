@@ -128,9 +128,10 @@ export interface ConversationContext {
  * Uses a structured approach with universal prompt formula and conversation history
  * @param prompt The original user prompt
  * @param context Optional conversation context for better enhancement
+ * @param modelOverride Optional model to use instead of default
  * @returns The improved prompt enhanced with AI and context awareness
  */
-export async function improvePrompt(prompt: string, context?: ConversationContext): Promise<string> {
+export async function improvePrompt(prompt: string, context?: ConversationContext, modelOverride?: string): Promise<string> {
     let improvedPrompt = prompt;
     
     // Step 1: Apply basic local corrections (typos and grammar)
@@ -138,7 +139,7 @@ export async function improvePrompt(prompt: string, context?: ConversationContex
     
     // Step 2: Use AI for intelligent enhancement with context
     console.log('🤖 Sending prompt for context-aware enhancement...');
-    const enhancedPrompt = await callExternalLLM(improvedPrompt, context);
+    const enhancedPrompt = await callExternalLLM(improvedPrompt, context, modelOverride);
     if (enhancedPrompt && enhancedPrompt.trim() !== '') {
         console.log('✅ Received context-aware enhanced prompt:', enhancedPrompt.substring(0, 100));
         return enhancedPrompt.trim();

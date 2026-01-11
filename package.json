@@ -2,7 +2,7 @@
   "name": "clarityai",
   "displayName": "ClarityAI - Prompt Improver for Copilot",
   "description": "Improves developer prompts by fixing grammar, spelling, and clarity before sending to Copilot",
-  "version": "0.8.0",
+  "version": "1.0.9",
   "publisher": "AhmedAttafii",
   "author": "Ahmed Attafi",
   "license": "MIT",
@@ -38,7 +38,19 @@
       {
         "id": "clarity",
         "name": "clarity",
-        "description": "Improves your prompts before sending them to Copilot",
+        "description": "Intelligently chooses fast or thinking mode based on prompt complexity",
+        "isSticky": false
+      },
+      {
+        "id": "clarity.fast",
+        "name": "clarity-fast",
+        "description": "Uses fastest LLM for quick prompt improvements",
+        "isSticky": false
+      },
+      {
+        "id": "clarity.thinking",
+        "name": "clarity-thinking",
+        "description": "Uses ClarityAI's advanced reasoning mode for complex prompts",
         "isSticky": false
       }
     ],
@@ -51,10 +63,40 @@
     "configuration": {
       "title": "Clarity",
       "properties": {
-        "clarity.geminiApiKey": {
+        "clarity.apiMode": {
+          "type": "string",
+          "enum": ["clarityai", "custom"],
+          "default": "clarityai",
+          "description": "Choose API mode: 'clarityai' to use ClarityAI's built-in engine, or 'custom' to use your own API configuration",
+          "enumDescriptions": [
+            "Use ClarityAI's built-in engine (no setup required)",
+            "Use your own custom API configuration"
+          ]
+        },
+        "clarity.apiKey": {
           "type": "string",
           "default": "",
-          "description": "Your Google Gemini API key for prompt enhancement (required). Get yours at: https://aistudio.google.com/app/apikey"
+          "description": "Your API key (only required if API Mode is set to 'custom')."
+        },
+        "clarity.apiBaseUrl": {
+          "type": "string",
+          "default": "https://integrate.api.nvidia.com/v1",
+          "description": "API base URL (only used in custom mode)."
+        },
+        "clarity.apiModel": {
+          "type": "string",
+          "default": "deepseek-ai/deepseek-v3.1",
+          "description": "Model identifier (only used in custom mode)."
+        },
+        "clarity.fastModel": {
+          "type": "string",
+          "default": "meta/llama-3.3-70b-instruct",
+          "description": "Model for quick responses (only used in custom mode)."
+        },
+        "clarity.thinkingModel": {
+          "type": "string",
+          "default": "deepseek-ai/deepseek-v3.1",
+          "description": "Model for complex prompts (only used in custom mode)."
         },
         "clarity.autoInjectContext": {
           "type": "boolean",
@@ -73,8 +115,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "package": "vsce package",
-    "test-gemini": "node -r ts-node/register src/test-gemini-integration.ts"
+    "package": "vsce package"
   },
   "devDependencies": {
     "@types/node": "20.x",

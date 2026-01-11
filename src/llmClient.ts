@@ -1,26 +1,30 @@
-import { getConfig, validateApiKey } from './config';
+import { getConfig, validateApiKey, getApiKeyErrorMessage } from './config';
 import { ConversationContext } from './autocorrect';
 
 /**
- * Interface for Gemini API response
+ * Interface for ClarityAI API response (OpenAI-compatible)
  */
-interface GeminiResponse {
-    candidates: Array<{
-        content: {
-            parts: Array<{
-                text: string;
-            }>;
+interface ClarityResponse {
+    choices: Array<{
+        message: {
+            content: string;
         };
+        finish_reason: string;
     }>;
+    usage: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+    };
 }
 
 /**
- * Extracts the clean enhanced prompt from Gemini's response, removing explanatory text
- * @param geminiResponse The full response from Gemini API
+ * Extracts the clean enhanced prompt from LLM's response, removing explanatory text
+ * @param llmResponse The full response from LLM API
  * @returns The clean enhanced prompt without commentary
  */
-function extractEnhancedPrompt(geminiResponse: string): string {
-    let cleaned = geminiResponse.trim();
+function extractEnhancedPrompt(llmResponse: string): string {
+    let cleaned = llmResponse.trim();
     
     // Try to find content after common intro phrases
     const introPatterns = [
@@ -60,30 +64,35 @@ function extractEnhancedPrompt(geminiResponse: string): string {
     // Safeguard: If cleaning removed too much, return original
     if (cleaned.length < 20) {
         console.warn('⚠️ Cleaning resulted in too short text, returning original');
-        return geminiResponse.trim();
+        return llmResponse.trim();
     }
     
     return cleaned;
 }
 
 /**
- * Calls external LLM (Google Gemini) to improve a prompt with conversation context
+ * Calls external API to improve a prompt with conversation context
  * @param prompt The prompt to improve
  * @param context Optional conversation context for better enhancement
- * @returns The improved prompt from the LLM
+ * @param modelOverride Optional model to use instead of default
+ * @returns The improved prompt from the API
  */
-export async function callExternalLLM(prompt: string, context?: ConversationContext): Promise<string> {
+export async function callExternalLLM(prompt: string, context?: ConversationContext, modelOverride?: string): Promise<string> {
     const config = getConfig();
     
-    console.log('🔑 API Key status:', {
-        hasKey: !!config.geminiApiKey,
-        keyLength: config.geminiApiKey?.length,
-        keyPrefix: config.geminiApiKey?.substring(0, 10) + '...'
+    // Use override model if provided, otherwise use default
+    const modelToUse = modelOverride || config.apiModel;
+    
+    console.log('🔑 API Configuration:', {
+        mode: config.apiMode,
+        baseUrl: config.apiBaseUrl,
+        model: modelToUse,
+        hasKey: !!config.apiKey
     });
     
     // Validate configuration
     if (!validateApiKey(config)) {
-        throw new Error('Gemini API key is not configured. Please set clarity.geminiApiKey in settings.');
+        throw new Error(getApiKeyErrorMessage(config));
     }
     
     // Build context information for enhanced prompting
@@ -146,56 +155,102 @@ USER INPUT: "${prompt}"
 
 ENHANCED PROMPT:`;
 
+    // Try primary model first
+    let response: Response;
+    let modelUsed = modelToUse;
+    
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${config.geminiApiKey}`, {
+        console.log(`🎯 Attempting with ${modelToUse}...`);
+        response = await fetch(`${config.apiBaseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.apiKey}`
             },
             body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: systemPrompt
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.7,
-                    topK: 40,
-                    topP: 0.95,
-                    maxOutputTokens: 2048,
-                }
+                model: modelToUse,
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are ClarityAI, an intelligent prompt enhancement system. Respond ONLY with the enhanced prompt, no explanations or meta-commentary. Use instruction-tuned mode for precise, structured responses.'
+                    },
+                    {
+                        role: 'user',
+                        content: systemPrompt
+                    }
+                ],
+                temperature: 0.3,  // Low temperature for consistent, focused output
+                top_p: 0.95,
+                max_tokens: 8192,
+                stream: false
             })
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+            // Only use fallback in ClarityAI mode and when not using an override
+            if (config.apiMode === 'clarityai' && !modelOverride) {
+                console.warn(`⚠️ Primary engine failed (${response.status}), falling back to secondary engine...`);
+                modelUsed = 'meta/llama-3.3-70b-instruct';
+                response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${config.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: modelUsed,
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'You are ClarityAI, an intelligent prompt enhancement system. Respond ONLY with the enhanced prompt, no explanations or meta-commentary. Use instruction-tuned mode for precise, structured responses.'
+                            },
+                            {
+                                role: 'user',
+                                content: systemPrompt
+                            }
+                        ],
+                        temperature: 0.3,
+                        top_p: 0.95,
+                        max_tokens: 4096,
+                        stream: false
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API error (both models failed): ${response.status} - ${errorText}`);
+                }
+            } else {
+                // In custom mode, just fail with the error
+                const errorText = await response.text();
+                throw new Error(`API error: ${response.status} - ${errorText}`);
+            }
         }
 
-        const data = await response.json() as GeminiResponse;
+        const data = await response.json() as ClarityResponse;
         
-        if (!data.candidates || data.candidates.length === 0) {
-            throw new Error('No response from Gemini API');
+        if (!data.choices || data.choices.length === 0) {
+            throw new Error('No response from API');
         }
 
-        const candidate = data.candidates[0];
-        if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
-            throw new Error('Invalid response structure from Gemini API');
+        const choice = data.choices[0];
+        if (!choice.message || !choice.message.content) {
+            throw new Error('Invalid response structure from API');
         }
 
-        const improvedPrompt = candidate.content.parts[0].text.trim();
+        const improvedPrompt = choice.message.content.trim();
         
         // Basic validation to ensure we got a reasonable response
         if (improvedPrompt.length === 0) {
-            throw new Error('Empty response from Gemini API');
+            throw new Error('Empty response from API');
         }
         
-        console.log('📥 Raw API response:', improvedPrompt.substring(0, 200));
+        console.log('📥 Raw API response received');
         
         // Clean the response to extract just the enhanced prompt
         const cleanedPrompt = extractEnhancedPrompt(improvedPrompt);
         
-        console.log('🧹 Cleaned prompt:', cleanedPrompt.substring(0, 200));
+        console.log('🧹 Cleaned prompt generated');
         
         // If cleaning removed too much, return the raw response
         if (cleanedPrompt.length < 20 && improvedPrompt.length > 50) {
@@ -203,25 +258,25 @@ ENHANCED PROMPT:`;
             return improvedPrompt;
         }
         
-        console.log('✅ Gemini API response received and cleaned');
+        console.log(`✅ API response received and cleaned (mode: ${config.apiMode})`);
         
         return cleanedPrompt;
         
     } catch (error) {
-        console.error('Error calling external LLM:', error);
+        console.error('Error calling external API (all models failed):', error);
         
         // Re-throw with more context
         if (error instanceof Error) {
-            throw new Error(`Failed to improve prompt with external LLM: ${error.message}`);
+            throw new Error(`Failed to improve prompt with ClarityAI: ${error.message}`);
         } else {
-            throw new Error('Failed to improve prompt with external LLM: Unknown error');
+            throw new Error('Failed to improve prompt with ClarityAI: Unknown error');
         }
     }
 }
 
 /**
- * Tests if the external LLM is available and working
- * @returns Promise that resolves to true if LLM is available, false otherwise
+ * Tests if the external API is available and working
+ * @returns Promise that resolves to true if API is available, false otherwise
  */
 export async function testExternalLLM(): Promise<boolean> {
     try {
@@ -229,25 +284,34 @@ export async function testExternalLLM(): Promise<boolean> {
         const result = await callExternalLLM(testPrompt);
         return result.length > 0;
     } catch (error) {
-        console.error('External LLM test failed:', error);
+        console.error('External API test failed:', error);
         return false;
     }
 }
 
 /**
- * Gets information about the current LLM configuration
+ * Gets information about the current configuration
  * @returns Configuration status and details
  */
 export function getLLMStatus(): {
     isConfigured: boolean;
     provider: string;
+    apiMode: string;
     hasApiKey: boolean;
 } {
     const config = getConfig();
     
+    let providerInfo = 'Unknown';
+    if (config.apiMode === 'clarityai') {
+        providerInfo = 'ClarityAI Engine (Optimized)';
+    } else {
+        providerInfo = 'Custom API Configuration';
+    }
+    
     return {
         isConfigured: validateApiKey(config),
-        provider: 'Google Gemini',
-        hasApiKey: config.geminiApiKey.trim() !== ''
+        provider: providerInfo,
+        apiMode: config.apiMode === 'clarityai' ? 'ClarityAI (Built-in)' : 'Custom API',
+        hasApiKey: config.apiKey.trim() !== ''
     };
 }

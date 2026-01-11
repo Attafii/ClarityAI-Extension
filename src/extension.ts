@@ -4,15 +4,20 @@ import { improvePrompt, ConversationContext } from './autocorrect';
 import { forwardToCopilot, debugAvailableCommands } from './forward';
 import { PROMPT_TEMPLATES, getTemplate, fillTemplate, searchTemplates, TEMPLATE_CATEGORIES } from './templates';
 import { injectContextIfEnabled } from './contextInjection';
+import { analyzePromptComplexity, getComplexityDescription } from './complexityAnalyzer';
 
 /**
  * Clarity VS Code Extension - Entry Point
  * 
- * This extension registers a Chat Participant (@clarity) that improves developer prompts
- * using Gemini 2.0 Flash API and shows buttons to send to Copilot or copy to clipboard.
+ * This extension registers three Chat Participants:
+ * - @clarity: Smart routing (chooses fast or thinking based on complexity)
+ * - @clarity-fast: Always uses ClarityAI fast mode
+ * - @clarity-thinking: Always uses ClarityAI advanced reasoning mode
  */
 
 let clarityParticipant: vscode.ChatParticipant | undefined;
+let clarityFastParticipant: vscode.ChatParticipant | undefined;
+let clarityThinkingParticipant: vscode.ChatParticipant | undefined;
 let lastEnhancedPrompt: string = '';
 
 /**
@@ -33,62 +38,96 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 /**
- * Registers the @clarity chat participant
+ * Registers the chat participants: @clarity, @clarity-fast, @clarity-thinking
  */
 function registerChatParticipant(context: vscode.ExtensionContext) {
-    // Create and register the chat participant
-    clarityParticipant = vscode.chat.createChatParticipant('clarity', handleChatRequest);
-    clarityParticipant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'img', 'ClarityAI-logo.png');
+    const iconPath = vscode.Uri.joinPath(context.extensionUri, 'img', 'ClarityAI-logo.png');
+    
+    // Create and register the main @clarity participant (smart routing)
+    clarityParticipant = vscode.chat.createChatParticipant('clarity', (request, chatContext, stream, token) => 
+        handleChatRequest(request, chatContext, stream, token, 'smart')
+    );
+    clarityParticipant.iconPath = iconPath;
     clarityParticipant.followupProvider = {
         provideFollowups(_result: vscode.ChatResult, _context: vscode.ChatContext, _token: vscode.CancellationToken) {
-            if (!lastEnhancedPrompt) {
-                // Default suggestions when no previous enhanced prompt
-                return [
-                    {
-                        prompt: 'Help me write a better prompt for coding tasks',
-                        label: '🎯 Coding Prompt Help',
-                        command: 'clarity'
-                    },
-                    {
-                        prompt: 'Show me examples of well-structured prompts',
-                        label: '📚 Show Examples',
-                        command: 'clarity'
-                    }
-                ];
-            }
-
-            // Context-aware suggestions based on last enhanced prompt
-            return [
-                {
-                    prompt: `Make this enhanced prompt even more specific: "${lastEnhancedPrompt}"`,
-                    label: '🎯 Add More Detail',
-                    command: 'clarity'
-                },
-                {
-                    prompt: `Simplify this enhanced prompt for beginners: "${lastEnhancedPrompt}"`,
-                    label: '🔰 Make Beginner-Friendly',
-                    command: 'clarity'
-                },
-                {
-                    prompt: `Simplify this prompt and make it more concise: "${lastEnhancedPrompt}"`,
-                    label: '✂️ Simplify Prompt',
-                    command: 'clarity'
-                },
-                {
-                    prompt: `Add more technical constraints to: "${lastEnhancedPrompt}"`,
-                    label: '⚙️ Add Constraints',
-                    command: 'clarity'
-                },
-                {
-                    prompt: `Convert this to a step-by-step tutorial format: "${lastEnhancedPrompt}"`,
-                    label: '� Make Step-by-Step',
-                    command: 'clarity'
-                }
-            ];
+            return getFollowupSuggestions();
         }
     };
-
     context.subscriptions.push(clarityParticipant);
+
+    // Create and register the @clarity-fast participant (always fast)
+    clarityFastParticipant = vscode.chat.createChatParticipant('clarity.fast', (request, chatContext, stream, token) => 
+        handleChatRequest(request, chatContext, stream, token, 'fast')
+    );
+    clarityFastParticipant.iconPath = iconPath;
+    clarityFastParticipant.followupProvider = {
+        provideFollowups(_result: vscode.ChatResult, _context: vscode.ChatContext, _token: vscode.CancellationToken) {
+            return getFollowupSuggestions();
+        }
+    };
+    context.subscriptions.push(clarityFastParticipant);
+
+    // Create and register the @clarity-thinking participant (always thinking)
+    clarityThinkingParticipant = vscode.chat.createChatParticipant('clarity.thinking', (request, chatContext, stream, token) => 
+        handleChatRequest(request, chatContext, stream, token, 'thinking')
+    );
+    clarityThinkingParticipant.iconPath = iconPath;
+    clarityThinkingParticipant.followupProvider = {
+        provideFollowups(_result: vscode.ChatResult, _context: vscode.ChatContext, _token: vscode.CancellationToken) {
+            return getFollowupSuggestions();
+        }
+    };
+    context.subscriptions.push(clarityThinkingParticipant);
+}
+
+/**
+ * Gets followup suggestions based on last enhanced prompt
+ */
+function getFollowupSuggestions(): vscode.ChatFollowup[] {
+    if (!lastEnhancedPrompt) {
+        // Default suggestions when no previous enhanced prompt
+        return [
+            {
+                prompt: 'Help me write a better prompt for coding tasks',
+                label: '🎯 Coding Prompt Help',
+                command: 'clarity'
+            },
+            {
+                prompt: 'Show me examples of well-structured prompts',
+                label: '📚 Show Examples',
+                command: 'clarity'
+            }
+        ];
+    }
+
+    // Context-aware suggestions based on last enhanced prompt
+    return [
+        {
+            prompt: `Make this enhanced prompt even more specific: "${lastEnhancedPrompt}"`,
+            label: '🎯 Add More Detail',
+            command: 'clarity'
+        },
+        {
+            prompt: `Simplify this enhanced prompt for beginners: "${lastEnhancedPrompt}"`,
+            label: '🔰 Make Beginner-Friendly',
+            command: 'clarity'
+        },
+        {
+            prompt: `Simplify this prompt and make it more concise: "${lastEnhancedPrompt}"`,
+            label: '✂️ Simplify Prompt',
+            command: 'clarity'
+        },
+        {
+            prompt: `Add more technical constraints to: "${lastEnhancedPrompt}"`,
+            label: '⚙️ Add Constraints',
+            command: 'clarity'
+        },
+        {
+            prompt: `Convert this to a step-by-step tutorial format: "${lastEnhancedPrompt}"`,
+            label: '📋 Make Step-by-Step',
+            command: 'clarity'
+        }
+    ];
 }
 
 /**
@@ -253,12 +292,34 @@ function showDiffView(stream: vscode.ChatResponseStream, original: string, enhan
     const originalDisplay = original.length > 200 ? original.substring(0, 200) + '...' : original;
     stream.markdown(`> ${originalDisplay}\n\n`);
     
-    // Show enhanced
+    // Show enhanced with formatting
     stream.markdown('**ClarityAI Enhanced Version:**\n\n');
-    stream.markdown('```\n' + enhanced + '\n```\n\n');
+    const formattedEnhanced = formatEnhancedPrompt(enhanced);
+    stream.markdown(formattedEnhanced + '\n\n');
     
     // Educational tip
     stream.markdown('💡 **Pro Tip:** ' + getRandomTip() + '\n\n');
+}
+
+/**
+ * Format enhanced prompt for better readability with line breaks and structure
+ */
+function formatEnhancedPrompt(prompt: string): string {
+    // Split into sentences for better readability
+    let formatted = prompt
+        // Add line break after periods followed by capital letters (new sentences)
+        .replace(/\.\s+([A-Z])/g, '.\n\n$1')
+        // Add line break after colons (usually introduces lists or details)
+        .replace(/:\s+/g, ':\n')
+        // Add line break before numbered lists
+        .replace(/\s+(\d+\))/g, '\n$1')
+        // Add line break before bullet points
+        .replace(/\s+-\s+/g, '\n- ')
+        // Clean up multiple consecutive newlines
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    
+    return formatted;
 }
 
 /**
@@ -450,7 +511,8 @@ async function handleChatRequest(
     request: vscode.ChatRequest,
     context: vscode.ChatContext,
     stream: vscode.ChatResponseStream,
-    _token: vscode.CancellationToken
+    _token: vscode.CancellationToken,
+    mode: 'smart' | 'fast' | 'thinking' = 'smart'
 ): Promise<vscode.ChatResult> {
     try {
         // Get user's prompt from the request
@@ -482,17 +544,48 @@ async function handleChatRequest(
         const config = getConfig();
         
         // Validate API key exists
-        if (!config.geminiApiKey || config.geminiApiKey.trim() === '') {
-            stream.markdown('❌ **No API key configured!** Please set your Gemini API key in settings.\n\n');
-            stream.markdown('Go to Settings → Search "clarity" → Add your API key from [Google AI Studio](https://aistudio.google.com/app/apikey)');
+        if (!config.apiKey || config.apiKey.trim() === '') {
+            stream.markdown('❌ **No API key configured!** Please set your API key in settings.\n\n');
+            stream.markdown('Go to Settings → Search "clarity" → Configure your API settings');
             return { metadata: { command: 'clarity', error: 'no_api_key' } };
         }
         
+        // Determine which model to use based on mode
+        let modelToUse: string;
+        let modeDescription: string;
+        
+        if (mode === 'fast') {
+            modelToUse = config.fastModel;
+            modeDescription = '⚡ **ClarityAI Fast Mode** - Optimized for quick response';
+        } else if (mode === 'thinking') {
+            modelToUse = config.thinkingModel;
+            modeDescription = '🧠 **ClarityAI Reasoning Mode** - Optimized for complex analysis';
+        } else {
+            // Smart mode: analyze complexity and choose
+            const complexity = analyzePromptComplexity(userPrompt);
+            const complexityDesc = getComplexityDescription(complexity);
+            
+            if (complexity.level === 'complex') {
+                modelToUse = config.thinkingModel;
+                modeDescription = `🤖 **ClarityAI Smart Mode** - ${complexityDesc}`;
+                if (complexity.reasons.length > 0) {
+                    modeDescription += `\n*Reasons: ${complexity.reasons.join(', ')}*`;
+                }
+            } else {
+                modelToUse = config.fastModel;
+                modeDescription = `🤖 **ClarityAI Smart Mode** - ${complexityDesc}`;
+            }
+        }
+        
+        stream.markdown(`${modeDescription}\n\n`);
+        
         // Debug configuration
         console.log('🔧 Clarity Configuration:', {
-            hasApiKey: !!config.geminiApiKey,
-            apiKeyLength: config.geminiApiKey.length,
-            apiKeyPrefix: config.geminiApiKey.substring(0, 10) + '...',
+            mode,
+            modelToUse,
+            hasApiKey: !!config.apiKey,
+            apiKeyLength: config.apiKey.length,
+            apiKeyPrefix: config.apiKey.substring(0, 10) + '...',
             contextMessages: conversationContext.previousMessages.length,
             foundTodos: conversationContext.todos.length,
             foundActions: conversationContext.lastActions.length,
@@ -510,17 +603,17 @@ async function handleChatRequest(
         // Show processing indicator with context info
         const contextCount = conversationContext.todos.length + conversationContext.lastActions.length + conversationContext.projectContext.length;
         if (contextCount > 0) {
-            stream.markdown(`� **ClarityAI is analyzing ${contextCount} context items (todos, actions, project info) and enhancing your prompt...**\n\n`);
+            stream.markdown(`🔍 **Analyzing ${contextCount} context items and enhancing your prompt...**\n\n`);
         } else {
-            stream.markdown('🤖 **ClarityAI is enhancing your prompt...**\n\n');
+            stream.markdown('🔍 **Enhancing your prompt...**\n\n');
         }
         
-        // Improve the prompt using context-aware enhancement
+        // Improve the prompt using context-aware enhancement with selected model
         let improvedPrompt: string;
         let enhancementFailed = false;
         
         try {
-            improvedPrompt = await improvePrompt(userPrompt, conversationContext);
+            improvedPrompt = await improvePrompt(userPrompt, conversationContext, modelToUse);
         } catch (error) {
             enhancementFailed = true;
             improvedPrompt = userPrompt;
@@ -698,8 +791,14 @@ function registerCommands(context: vscode.ExtensionContext) {
 export function deactivate() {
     console.log('Clarity extension deactivated');
     
-    // Clean up the chat participant
+    // Clean up all chat participants
     if (clarityParticipant) {
         clarityParticipant.dispose();
+    }
+    if (clarityFastParticipant) {
+        clarityFastParticipant.dispose();
+    }
+    if (clarityThinkingParticipant) {
+        clarityThinkingParticipant.dispose();
     }
 }

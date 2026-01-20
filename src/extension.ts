@@ -731,22 +731,40 @@ async function handleChatRequest(
             command: 'clarity.copyPrompt',
             arguments: [improvedPrompt]
         });
-
-        // v1.1.3+: Add Mermaid Live Editor button if diagram exists
-        if (improvedPrompt.includes('```mermaid')) {
-            const mermaidMatch = improvedPrompt.match(/```mermaid([\s\S]*?)```/);
-            if (mermaidMatch) {
-                const encodedMermaid = Buffer.from(mermaidMatch[1].trim()).toString('base64');
-                const mermaidLiveUrl = `https://mermaid.live/edit#base64:${encodedMermaid}`;
-                stream.button({
-                    title: '🌐 Open in Mermaid Live',
-                    command: 'clarity.openUrl',
-                    arguments: [mermaidLiveUrl]
-                });
-            }
-        }
         
-        stream.markdown('\n\n--- \n\n');
+        stream.markdown('\n\n**Refine Further:**\n\n');
+        
+        // Refinement actions - these create new enhanced prompts
+        stream.button({
+            title: '🔍 Add More Details',
+            command: 'clarity.refinePrompt',
+            arguments: [improvedPrompt, 'detail']
+        });
+        stream.button({
+            title: '✂️ Simplify',
+            command: 'clarity.refinePrompt',
+            arguments: [improvedPrompt, 'simplify']
+        });
+        stream.button({
+            title: '📋 Step-by-Step',
+            command: 'clarity.refinePrompt',
+            arguments: [improvedPrompt, 'steps']
+        });
+        stream.button({
+            title: '🎓 Beginner-Friendly',
+            command: 'clarity.refinePrompt',
+            arguments: [improvedPrompt, 'beginner']
+        });
+        stream.button({
+            title: '⚡ Production-Ready',
+            command: 'clarity.refinePrompt',
+            arguments: [improvedPrompt, 'production']
+        });
+        stream.button({
+            title: '🧪 Add Tests',
+            command: 'clarity.refinePrompt',
+            arguments: [improvedPrompt, 'tests']
+        });
 
         stream.button({
             title: '🏗️ Generate Test Cases',

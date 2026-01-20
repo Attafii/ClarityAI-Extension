@@ -917,3 +917,58 @@ export function analyzeImprovements(original: string, improved: string): {
         improvedLength: improved.length
     };
 }
+/**
+ * Analyzes the quality of a prompt and suggests improvements
+ * @param prompt The prompt to analyze
+ * @returns Quality report with score and issues
+ */
+export function analyzePromptQuality(prompt: string): {
+    score: number;
+    issues: string[];
+    isStale: boolean;
+} {
+    const issues: string[] = [];
+    let score = 100;
+
+    // 1. Length Check
+    if (prompt.length < 15) {
+        score -= 40;
+        issues.push('Prompt is too short and likely lacks context.');
+    } else if (prompt.length < 50) {
+        score -= 20;
+        issues.push('Prompt is brief; adding more details would help.');
+    }
+
+    // 2. Technical Context Check
+    const contextKeywords = ['using', 'with', 'framework', 'library', 'in', 'using', 'context'];
+    const hasContext = contextKeywords.some(k => prompt.toLowerCase().includes(k));
+    if (!hasContext) {
+        score -= 15;
+        issues.push('Missing technical context (languages, frameworks, libraries).');
+    }
+
+    // 3. Output Format Check
+    const outputKeywords = ['format', 'output', 'json', 'markdown', 'list', 'code', 'diagram', 'table'];
+    const hasOutputPreference = outputKeywords.some(k => prompt.toLowerCase().includes(k));
+    if (!hasOutputPreference) {
+        score -= 10;
+        issues.push('No output format specified.');
+    }
+
+    // 4. Vagueness Check
+    const vagueWords = ['something', 'stuff', 'thing', 'make', 'do', 'fix'];
+    const vagueCount = vagueWords.filter(w => prompt.toLowerCase().includes(w)).length;
+    if (vagueCount > 2) {
+        score -= 15;
+        issues.push('Contains multiple vague terms (something, stuff, etc.).');
+    }
+
+    // 5. Stale Check (Heuristic: lacks specific detail or looks like a repeat)
+    const isStale = (score < 50);
+
+    return {
+        score: Math.max(0, score),
+        issues,
+        isStale
+    };
+}

@@ -25,3 +25,9 @@ If you're getting API errors like `404` or `500`, it usually means the built-in 
 - Check your internet connection.
 - Try switching between fast/thinking modes.
 - Reload VS Code (Ctrl+Shift+P → "Developer: Reload Window").
+
+## Is this for Stacks/Bitcoin Smart Contracts?
+
+No. While there is a smart contract language named "Clarity," this extension is **ClarityAI**, a prompt optimization layer for VS Code Copilot.
+- If you are looking for Stacks development tools, search for the "Clarity" language extension in the Marketplace.
+- If you are writing Clarity smart contract code, our auto-detection will warn you that we are a prompt tool, not a blockchain IDE.

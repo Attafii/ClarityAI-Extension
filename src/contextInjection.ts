@@ -18,6 +18,8 @@ export interface ProjectContext {
     buildTool?: string;
     hasTypeScript?: boolean;
     hasTests?: boolean;
+    workspaceMap?: string[]; // Simplified semantic relationship map
+    customRules?: string; // Content from .clarityrules
 }
 
 /**
@@ -49,7 +51,62 @@ export async function extractProjectContext(): Promise<ProjectContext> {
         Object.assign(context, packageJsonContext);
     }
     
+    // Generate workspace map for better indexing
+    context.workspaceMap = await generateWorkspaceMap();
+
+    // Read .clarityrules if it exists
+    context.customRules = await readClarityRules();
+    
     return context;
+}
+
+/**
+ * Reads .clarityrules file from the workspace root
+ */
+async function readClarityRules(): Promise<string | undefined> {
+    try {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) return undefined;
+
+        const clarityRulesUri = vscode.Uri.joinPath(workspaceFolders[0].uri, '.clarityrules');
+        const content = await vscode.workspace.fs.readFile(clarityRulesUri);
+        return content.toString().trim();
+    } catch (error) {
+        // File doesn't exist
+        return undefined;
+    }
+}
+
+/**
+ * Generates a semantic map of the workspace exports and structure
+ */
+async function generateWorkspaceMap(): Promise<string[]> {
+    const map: string[] = [];
+    try {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) return [];
+
+        // Find important files (limit to 10 for performance)
+        const files = await vscode.workspace.findFiles('src/**/*.{ts,js,tsx,jsx}', '**/node_modules/**', 10);
+        
+        for (const file of files) {
+            const content = await vscode.workspace.fs.readFile(file);
+            const text = content.toString();
+            const relativePath = vscode.workspace.asRelativePath(file);
+            
+            // Extract public exports (simplified regex)
+            const exports = text.match(/export (class|function|const|interface) (\w+)/g);
+            if (exports) {
+                const names = exports.map(e => e.split(' ').pop());
+                map.push(`${relativePath} exports: ${names.join(', ')}`);
+            }
+        }
+        
+        return map;
+    } catch (error) {
+        console.error('Failed to generate workspace map:', error);
+        return [];
+    }
 }
 
 /**
@@ -189,6 +246,16 @@ export function generateContextString(context: ProjectContext, includeFile: bool
         if (testFramework) {
             parts.push(`Tests: ${testFramework}`);
         }
+    }
+    
+    // Workspace semantic map
+    if (context.workspaceMap && context.workspaceMap.length > 0) {
+        parts.push(`Workspace Layout:\n    ${context.workspaceMap.join('\n    ')}`);
+    }
+
+    // Custom Rules from .clarityrules
+    if (context.customRules) {
+        parts.push(`USER-DEFINED PROJECT RULES:\n${context.customRules}`);
     }
     
     if (parts.length === 0) {

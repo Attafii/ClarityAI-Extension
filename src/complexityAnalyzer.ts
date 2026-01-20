@@ -30,12 +30,18 @@ export function analyzePromptComplexity(prompt: string): ComplexityAnalysis {
     
     // Factor 2: Technical complexity indicators
     const technicalKeywords = [
-        'algorithm', 'architecture', 'design pattern', 'refactor', 'optimize',
+        'architecture', 'design pattern', 'refactor', 'optimize',
         'scalable', 'performance', 'security', 'authentication', 'authorization',
         'database schema', 'microservice', 'distributed', 'concurrent', 'async',
         'state management', 'dependency injection', 'solid principles', 'clean code'
     ];
     
+    // Architect/Design are high-complexity indicators
+    if (prompt.toLowerCase().includes('design') || prompt.toLowerCase().includes('architect')) {
+        score += 20;
+        reasons.push('Architectural design request');
+    }
+
     const technicalMatches = technicalKeywords.filter(kw => 
         prompt.toLowerCase().includes(kw)
     ).length;

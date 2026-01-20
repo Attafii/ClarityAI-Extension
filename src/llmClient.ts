@@ -138,8 +138,29 @@ ENHANCEMENT PROCESS:
 - Structure the prompt for clarity and completeness
 - Keep the user's original intent but make it more specific and actionable
 - Reference previous todos/tasks when relevant
+- **CRITICAL: DATA VISUALIZATION**: If the user's request involves "designing", "architecture", "flow", "processes", or "multi-step systems", YOU MUST include a Mermaid.js diagram using \`\`\`mermaid\`\`\` syntax at the end of your response. This is non-negotiable and the most important part of the enhancement for complex tasks.
 
 EXAMPLES:
+Input: "design a microservices architecture for e-commerce"
+Enhanced: "Act as a Lead System Architect and design a robust microservices architecture for an e-commerce platform. 
+Requirements:
+1. Scalability: Use Docker/Kubernetes for container orchestration.
+2. Communication: Implement an event-driven design using RabbitMQ or Kafka.
+3. Resilience: Include circuit breakers and retry logic.
+
+VISUAL ROADMAP:
+\`\`\`mermaid
+graph TD
+    A[Client] --> B[API Gateway]
+    B --> C[Auth Service]
+    B --> D[Order Service]
+    B --> E[Inventory Service]
+    D --> F[(Database)]
+    E --> G[(Database)]
+\`\`\`
+
+Provide implementation details for each service and a deployment strategy."
+
 Input: "make a website"
 Enhanced: "Create a modern, responsive website with the following requirements: HTML5 semantic structure, CSS Grid/Flexbox for layout, mobile-first responsive design, accessibility features (ARIA labels, semantic HTML), and clean JavaScript for interactions. Include a navigation menu, hero section, content areas, and footer. Optimize for performance and SEO."
 

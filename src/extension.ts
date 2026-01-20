@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getConfig } from './config';
-import { improvePrompt, ConversationContext } from './autocorrect';
+import { improvePrompt, ConversationContext, analyzePromptQuality } from './autocorrect';
 import { forwardToCopilot, debugAvailableCommands } from './forward';
 import { PROMPT_TEMPLATES, getTemplate, fillTemplate, searchTemplates, TEMPLATE_CATEGORIES } from './templates';
 import { injectContextIfEnabled } from './contextInjection';
@@ -259,6 +259,12 @@ function showDiffView(stream: vscode.ChatResponseStream, original: string, enhan
     if (stats.lengthIncrease > 50) {
         stream.markdown(`- 📝 **${stats.lengthIncrease}% more detailed** - Comprehensive prompts = better code\n`);
     }
+    if (enhanced.includes('```mermaid')) {
+        stream.markdown(`- 🗺️ **Visual Roadmap added** - Mermaid.js diagram included for architectural clarity\n`);
+    }
+    if (original.toLowerCase().includes('USER-DEFINED PROJECT RULES')) {
+        stream.markdown(`- 📜 **Custom Rules applied** - Injected constraints from your .clarityrules file\n`);
+    }
     
     // Highlight key additions with explanations
     const keyAdditions = extractKeyAdditions(original, enhanced);
@@ -294,6 +300,30 @@ function showDiffView(stream: vscode.ChatResponseStream, original: string, enhan
     
     // Show enhanced with formatting
     stream.markdown('**ClarityAI Enhanced Version:**\n\n');
+    
+    // Feature: Visual Preview for Mermaid.js
+    if (enhanced.includes('```mermaid')) {
+        const mermaidMatch = enhanced.match(/```mermaid([\s\S]*?)```/);
+        if (mermaidMatch) {
+            stream.markdown('### 🖼️ Visual Architecture Preview\n');
+            stream.markdown(mermaidMatch[0] + '\n\n'); // This renders the diagram
+            
+            // Add a "View in Mermaid Live" action button
+            const encodedMermaid = Buffer.from(mermaidMatch[1].trim()).toString('base64');
+            const mermaidLiveUrl = `https://mermaid.live/edit#base64:${encodedMermaid}`;
+            
+            stream.markdown(`> 💡 **Tip:** If the diagram above doesn't render, use the button below to view it in the live editor.\n\n`);
+            
+            stream.button({
+                command: 'clarity.openUrl',
+                title: '🌐 Open in Mermaid Live',
+                arguments: [mermaidLiveUrl]
+            });
+            
+            stream.markdown('\n\n--- \n\n');
+        }
+    }
+
     const formattedEnhanced = formatEnhancedPrompt(enhanced);
     stream.markdown(formattedEnhanced + '\n\n');
     
@@ -303,10 +333,29 @@ function showDiffView(stream: vscode.ChatResponseStream, original: string, enhan
 
 /**
  * Format enhanced prompt for better readability with line breaks and structure
+ * Ensures code blocks (like Mermaid) are left untouched
  */
 function formatEnhancedPrompt(prompt: string): string {
-    // Split into sentences for better readability
-    let formatted = prompt
+    // If the prompt contains code blocks, we need to be careful
+    if (prompt.includes('```')) {
+        // Split by code blocks
+        const parts = prompt.split(/(```[\s\S]*?```)/g);
+        return parts.map(part => {
+            if (part.startsWith('```')) {
+                return part; // Don't format code blocks
+            }
+            return formatTextOnly(part);
+        }).join('');
+    }
+    
+    return formatTextOnly(prompt);
+}
+
+/**
+ * Internal helper to format regular text sections
+ */
+function formatTextOnly(text: string): string {
+    return text
         // Add line break after periods followed by capital letters (new sentences)
         .replace(/\.\s+([A-Z])/g, '.\n\n$1')
         // Add line break after colons (usually introduces lists or details)
@@ -318,8 +367,6 @@ function formatEnhancedPrompt(prompt: string): string {
         // Clean up multiple consecutive newlines
         .replace(/\n{3,}/g, '\n\n')
         .trim();
-    
-    return formatted;
 }
 
 /**
@@ -505,6 +552,20 @@ async function handleTemplateRequest(
 }
 
 /**
+ * Detects if the user prompt contains Clarity/Stacks smart contract code
+ */
+function detectClaritySmartContract(prompt: string): boolean {
+    const clarityKeywords = [
+        'define-public', 'define-read-only', 'define-private', 'define-map',
+        'define-data-var', 'ft-mint!', 'ft-transfer!', 'nft-mint!',
+        'nft-transfer!', 'contract-call?', 'as-contract', 'contract-caller'
+    ];
+    
+    const promptLower = prompt.toLowerCase();
+    return clarityKeywords.some(keyword => promptLower.includes(keyword));
+}
+
+/**
  * Handles incoming chat requests to @clarity
  */
 async function handleChatRequest(
@@ -517,6 +578,14 @@ async function handleChatRequest(
     try {
         // Get user's prompt from the request
         let userPrompt = request.prompt.trim();
+
+        // v1.2.0: Quality Analysis & Stale Check
+        const quality = analyzePromptQuality(userPrompt);
+        if (quality.score < 60) {
+            stream.markdown(`⚠️ **Low Quality Prompt Detected (Score: ${quality.score}/100)**\n`);
+            quality.issues.forEach(issue => stream.markdown(`- ${issue}\n`));
+            stream.markdown(`\n*I will still try to enhance this, but adding more detail will give better results.*\n\n---\n\n`);
+        }
         
         // Handle edge case: empty prompt
         if (!userPrompt) {
@@ -527,6 +596,12 @@ async function handleChatRequest(
         // Check if user is requesting a template
         if (userPrompt.startsWith('template:') || userPrompt.startsWith('t:')) {
             return await handleTemplateRequest(userPrompt, stream);
+        }
+
+        // Check for Language Collision (Clarity smart contracts)
+        if (detectClaritySmartContract(userPrompt)) {
+            stream.markdown('⚠️ **Note:** It looks like you might be writing a [Clarity smart contract](https://docs.stacks.co/docs/write-smart-contracts/overview) (Bitcoin/Stacks). \n\n');
+            stream.markdown('ClarityAI is a **prompt enhancement tool** for VS Code Copilot. We\'ll still try to improve your prompt, but we aren\'t a blockchain-specific tool! 🚀\n\n ---\n\n');
         }
 
         // Check if user wants to list templates
@@ -656,39 +731,33 @@ async function handleChatRequest(
             command: 'clarity.copyPrompt',
             arguments: [improvedPrompt]
         });
+
+        // v1.1.3+: Add Mermaid Live Editor button if diagram exists
+        if (improvedPrompt.includes('```mermaid')) {
+            const mermaidMatch = improvedPrompt.match(/```mermaid([\s\S]*?)```/);
+            if (mermaidMatch) {
+                const encodedMermaid = Buffer.from(mermaidMatch[1].trim()).toString('base64');
+                const mermaidLiveUrl = `https://mermaid.live/edit#base64:${encodedMermaid}`;
+                stream.button({
+                    title: '🌐 Open in Mermaid Live',
+                    command: 'clarity.openUrl',
+                    arguments: [mermaidLiveUrl]
+                });
+            }
+        }
         
-        stream.markdown('\n\n**Refine Further:**\n\n');
+        stream.markdown('\n\n--- \n\n');
+
+        stream.button({
+            title: '🏗️ Generate Test Cases',
+            command: 'clarity.generateTests',
+            arguments: [improvedPrompt]
+        });
         
-        // Refinement actions - these create new enhanced prompts
         stream.button({
-            title: '🔍 Add More Details',
-            command: 'clarity.refinePrompt',
-            arguments: [improvedPrompt, 'detail']
-        });
-        stream.button({
-            title: '✂️ Simplify',
-            command: 'clarity.refinePrompt',
-            arguments: [improvedPrompt, 'simplify']
-        });
-        stream.button({
-            title: '📋 Step-by-Step',
-            command: 'clarity.refinePrompt',
-            arguments: [improvedPrompt, 'steps']
-        });
-        stream.button({
-            title: '🎓 Beginner-Friendly',
-            command: 'clarity.refinePrompt',
-            arguments: [improvedPrompt, 'beginner']
-        });
-        stream.button({
-            title: '⚡ Production-Ready',
-            command: 'clarity.refinePrompt',
-            arguments: [improvedPrompt, 'production']
-        });
-        stream.button({
-            title: '🧪 Add Tests',
-            command: 'clarity.refinePrompt',
-            arguments: [improvedPrompt, 'tests']
+            title: '💬 Tweak Enhancement',
+            command: 'clarity.tweakEnhancement',
+            arguments: [improvedPrompt]
         });
 
         return { 
@@ -776,11 +845,61 @@ function registerCommands(context: vscode.ExtensionContext) {
         }
     });
 
+    // Command: Tweak enhancement (Interactive Refinement)
+    const tweakEnhancementCommand = vscode.commands.registerCommand('clarity.tweakEnhancement', async (currentEnhancedPrompt: string) => {
+        try {
+            const tweakRequest = await vscode.window.showInputBox({
+                prompt: 'How would you like to tweak this enhancement?',
+                placeHolder: 'e.g., "Make it more focused on security" or "Make it more concise"'
+            });
+
+            if (tweakRequest) {
+                const combinedRequest = `Tweak this enhanced prompt according to these instructions: "${tweakRequest}"\n\nCURRENT ENHANCED PROMPT:\n${currentEnhancedPrompt}`;
+                
+                await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
+                await vscode.commands.executeCommand('workbench.action.chat.open', {
+                    query: `@clarity ${combinedRequest}`
+                });
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage('❌ Failed to trigger tweak.');
+            console.error('Failed to tweak:', error);
+        }
+    });
+
+    // Command: Generate Test Cases
+    const generateTestsCommand = vscode.commands.registerCommand('clarity.generateTests', async (currentEnhancedPrompt: string) => {
+        try {
+            const testRequest = `Based on this implementation plan, generate a comprehensive set of test cases (unit, integration, and edge cases). Include expected inputs and outputs.\n\nPLAN:\n${currentEnhancedPrompt}`;
+            
+            await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
+            await vscode.commands.executeCommand('workbench.action.chat.open', {
+                query: `@clarity ${testRequest}`
+            });
+        } catch (error) {
+            vscode.window.showErrorMessage('❌ Failed to generate tests.');
+            console.error('Failed to generate tests:', error);
+        }
+    });
+
+    // Command: Open URL in external browser
+    const openUrlCommand = vscode.commands.registerCommand('clarity.openUrl', async (url: string) => {
+        try {
+            await vscode.env.openExternal(vscode.Uri.parse(url));
+        } catch (error) {
+            vscode.window.showErrorMessage('❌ Failed to open URL.');
+            console.error('Failed to open URL:', error);
+        }
+    });
+
     // Add commands to subscriptions for proper cleanup
     context.subscriptions.push(
         forwardToCopilotCommand,
         copyPromptCommand,
-        refinePromptCommand
+        refinePromptCommand,
+        tweakEnhancementCommand,
+        generateTestsCommand,
+        openUrlCommand
     );
 }
 

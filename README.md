@@ -1,10 +1,12 @@
 # ClarityAI - The Smart Prompt Layer for VS Code Copilot
 
+> ⚠️ **Not to be confused with:** The Clarity Smart Contract language for Bitcoin (Stacks). This is a VS Code extension for optimizing AI prompts.
+
 Hey there! Ever asked Copilot to "make a website" and gotten back something generic or missing half your tech stack? ClarityAI fixes that.
 
 ClarityAI acts as an intelligent "translation layer" between you and Copilot. It takes your raw thoughts and transforms them into detailed, professional, and context-aware prompts that get you correct, production-ready code on the first try.
 
-## 🚀 Key Features (v1.0.9)
+## 🚀 Key Features (v1.2.1)
 
 ### 🤖 Smart Adaptive Routing
 ClarityAI analyzes your prompt's complexity using a specialized scoring algorithm.
@@ -12,12 +14,20 @@ ClarityAI analyzes your prompt's complexity using a specialized scoring algorith
 - **Thinking Mode**: Deep reasoning for architecture, complex algorithms, and performance analysis.
 - **Smart Switch**: Just use `@clarity` and let the engine decide the best model for the job.
 
-### 📋 Automatic Context Injection
-No more typing "I'm using Next.js with TypeScript and Tailwind." ClarityAI automatically detects:
-- Your Framework (Next.js, React, Express, etc.)
-- Your Language (TypeScript/JavaScript)
-- Key Dependencies (Prisma, Zod, shadcn, etc.)
-- Active File Purpose (e.g., detecting if you're writing a unit test)
+### 📋 .clarityrules & Workspace Mapping
+- **.clarityrules**: Create a `.clarityrules` file in your root to force Clarity to always respect your project's specific constraints (e.g. "Always use Tailwind", "No external libraries").
+- **Workspace Mapping**: Indexes your project's `src` folder to understand exports and utilities.
+- **Dynamic Context**: Automatically detects Next.js, React, Express, and more.
+
+### 🛠️ Interactive Refinement
+Not happy with the first enhancement? Use the **Tweak Enhancement** button to give follow-up instructions (e.g., "Make it more secure") without re-typing everything.
+
+### 🗺️ Visual Roadmaps & Mermaid Live
+Architectural requests automatically generate **Mermaid.js diagrams**. Version 1.2.1 adds a direct **"Open in Mermaid Live"** button to view or edit diagrams if they don't render correctly in chat.
+
+### 📊 Quality Analysis & Test Generator
+- **Quality Score**: Get real-time feedback and actionable advice if your prompt is too vague.
+- **Test Case Generator**: Convert any implementation plan into a comprehensive unit and integration test plan with one click.
 
 ### 📚 Professional Template Library
 Access 12+ industry-standard blueprints for:

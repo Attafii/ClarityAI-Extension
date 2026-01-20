@@ -6,7 +6,7 @@ Hey there! Ever asked Copilot to "make a website" and gotten back something gene
 
 ClarityAI acts as an intelligent "translation layer" between you and Copilot. It takes your raw thoughts and transforms them into detailed, professional, and context-aware prompts that get you correct, production-ready code on the first try.
 
-## 🚀 Key Features (v1.2.0)
+## 🚀 Key Features (v1.2.2)
 
 ### 🤖 Smart Adaptive Routing
 ClarityAI analyzes your prompt's complexity using a specialized scoring algorithm.

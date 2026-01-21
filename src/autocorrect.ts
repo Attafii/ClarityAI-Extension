@@ -129,17 +129,25 @@ export interface ConversationContext {
  * @param prompt The original user prompt
  * @param context Optional conversation context for better enhancement
  * @param modelOverride Optional model to use instead of default
+ * @param persona Optional persona for enhancement
+ * @param enableMermaid Optional flag to enable/disable Mermaid diagram generation
  * @returns The improved prompt enhanced with AI and context awareness
  */
-export async function improvePrompt(prompt: string, context?: ConversationContext, modelOverride?: string): Promise<string> {
+export async function improvePrompt(
+    prompt: string, 
+    context?: ConversationContext, 
+    modelOverride?: string, 
+    persona?: string,
+    enableMermaid: boolean = true
+): Promise<string> {
     let improvedPrompt = prompt;
     
     // Step 1: Apply basic local corrections (typos and grammar)
     improvedPrompt = applyLocalCorrections(improvedPrompt);
     
     // Step 2: Use AI for intelligent enhancement with context
-    console.log('🤖 Sending prompt for context-aware enhancement...');
-    const enhancedPrompt = await callExternalLLM(improvedPrompt, context, modelOverride);
+    console.log(`🤖 Sending prompt for ${persona || 'general'} enhancement...`);
+    const enhancedPrompt = await callExternalLLM(improvedPrompt, context, modelOverride, persona, enableMermaid);
     if (enhancedPrompt && enhancedPrompt.trim() !== '') {
         console.log('✅ Received context-aware enhanced prompt:', enhancedPrompt.substring(0, 100));
         return enhancedPrompt.trim();
@@ -971,4 +979,42 @@ export function analyzePromptQuality(prompt: string): {
         issues,
         isStale
     };
+}
+
+/**
+ * Scans a prompt for common security vulnerabilities in logic
+ */
+export function scanForVulnerabilities(prompt: string): string[] {
+    const vulnerabilities: string[] = [];
+    const promptLower = prompt.toLowerCase();
+
+    // 1. Data Sanitization / Injection
+    if (promptLower.includes('eval(') || promptLower.includes('exec(')) {
+        vulnerabilities.push('Use of eval/exec detected. Avoid executing arbitrary strings as code.');
+    }
+    if ((promptLower.includes('sql') || promptLower.includes('query')) && promptLower.includes('string concatenation')) {
+        vulnerabilities.push('SQL query via string concatenation detected. Use parameterized queries/prepared statements to prevent SQL injection.');
+    }
+    
+    // 2. Authentication & Authorization
+    if (promptLower.includes('disable auth') || promptLower.includes('no auth') || promptLower.includes('bypass login')) {
+        vulnerabilities.push('Instructions to disable or bypass authentication detected. Ensure proper security controls are always implemented.');
+    }
+
+    // 3. Secrets & Sensitive Info (logic-based)
+    if (promptLower.includes('hardcode password') || promptLower.includes('plain text password')) {
+        vulnerabilities.push('Recommendation for hardcoded passwords detected. Always use environment variables or secret managers.');
+    }
+
+    // 4. Transport Security
+    if (promptLower.includes('http://') && !promptLower.includes('https://')) {
+        vulnerabilities.push('Use of insecure HTTP protocol detected. Always prefer HTTPS for data in transit.');
+    }
+
+    // 5. CORS/Open Sharing
+    if (promptLower.includes('allow all cors') || promptLower.includes("access-control-allow-origin: '*'")) {
+        vulnerabilities.push("Insecure CORS configuration (Allow All) detected. Narrow down allowed origins for production.");
+    }
+
+    return vulnerabilities;
 }

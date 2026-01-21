@@ -75,24 +75,40 @@ function extractEnhancedPrompt(llmResponse: string): string {
  * @param prompt The prompt to improve
  * @param context Optional conversation context for better enhancement
  * @param modelOverride Optional model to use instead of default
+ * @param persona Optional persona to adopt for enhancement
+ * @param enableMermaid Optional flag to enable/disable Mermaid diagram generation
  * @returns The improved prompt from the API
  */
-export async function callExternalLLM(prompt: string, context?: ConversationContext, modelOverride?: string): Promise<string> {
+export async function callExternalLLM(
+    prompt: string, 
+    context?: ConversationContext, 
+    modelOverride?: string, 
+    persona?: string,
+    enableMermaid: boolean = true
+): Promise<string> {
     const config = getConfig();
     
+    // Choose persona instruction
+    let personaInstruction = '';
+    if (persona) {
+        const personas: Record<string, string> = {
+            'architect': 'ACT as an Expert System Architect with focus on scalability, SOLID principles, and design patterns.',
+            'security': 'ACT as an Expert Security Researcher and Penetration Tester with focus on OWASP Top 10, sanitization, and vulnerability prevention.',
+            'reviewer': 'ACT as an Expert Senior Lead Developer with a critical, meticulous eye for logic, edge cases, and technical debt. Critique the logic and suggest robust alternatives.',
+            'tester': 'ACT as a Senior QA Engineer / SDET. Focus on edge cases, unit/integration test coverage, boundary conditions, and robust error handling strategies.',
+            'documentation': 'ACT as a Technical Writer and Senior Documentation Engineer. Focus on clarity, JSDoc standards, detailed READMEs, and explaining complex logic for other developers.',
+            'performance': 'ACT as a Performance Engineer and Optimization Specialist. Focus on big-O complexity, memory footprint, cache efficiency, and high-throughput logic.',
+            'frontend': 'ACT as a Senior Frontend Architect and UI/UX Specialist. Focus on accessibility (A11y), responsive design, modern CSS principles, and component lifecycle efficiency.'
+        };
+        personaInstruction = personas[persona] || '';
+    }
+
     // Use override model if provided, otherwise use default
     const modelToUse = modelOverride || config.apiModel;
     
-    console.log('🔑 API Configuration:', {
-        mode: config.apiMode,
-        baseUrl: config.apiBaseUrl,
-        model: modelToUse,
-        hasKey: !!config.apiKey
-    });
-    
     // Validate configuration
     if (!validateApiKey(config)) {
-        throw new Error(getApiKeyErrorMessage(config));
+        throw new Error(getApiKeyErrorMessage());
     }
     
     // Build context information for enhanced prompting
@@ -120,9 +136,16 @@ export async function callExternalLLM(prompt: string, context?: ConversationCont
             contextInfo = `\n\nCONVERSATION CONTEXT:\n${parts.join('\n\n')}\n\nUSE THIS CONTEXT to make the enhanced prompt more relevant and specific to the ongoing work.`;
         }
     }
+
+    // v1.3.1: Conditional logic for Mermaid
+    const mermaidInstruction = enableMermaid 
+        ? '- **CRITICAL: DATA VISUALIZATION**: If the user\'s request involves "designing", "architecture", "flow", "processes", or "multi-step systems", YOU MUST include a Mermaid.js diagram using ```mermaid``` syntax at the end of your response. This is non-negotiable and the most important part of the enhancement for complex tasks.'
+        : '- Skip generating Mermaid diagrams even for architectural requests.';
     
     // Construct the system prompt for intelligent prompt enhancement
     const systemPrompt = `You are ClarityAI, an intelligent prompt enhancement system that analyzes user input and creates better, more structured prompts with conversation awareness.
+
+${personaInstruction}
 
 YOUR TASK: Take the user's input and enhance it by:
 1. DETECTING the field/domain (web dev, AI, cloud, security, etc.)
@@ -138,7 +161,7 @@ ENHANCEMENT PROCESS:
 - Structure the prompt for clarity and completeness
 - Keep the user's original intent but make it more specific and actionable
 - Reference previous todos/tasks when relevant
-- **CRITICAL: DATA VISUALIZATION**: If the user's request involves "designing", "architecture", "flow", "processes", or "multi-step systems", YOU MUST include a Mermaid.js diagram using \`\`\`mermaid\`\`\` syntax at the end of your response. This is non-negotiable and the most important part of the enhancement for complex tasks.
+${mermaidInstruction}
 
 EXAMPLES:
 Input: "design a microservices architecture for e-commerce"
@@ -182,12 +205,19 @@ ENHANCED PROMPT:`;
     
     try {
         console.log(`🎯 Attempting with ${modelToUse}...`);
+        
+        // Prepare headers
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+        };
+
+        // If in custom mode, use the user's API key
+        // If in clarityai mode, use the PROXY_TOKEN
+        headers['Authorization'] = `Bearer ${config.apiKey}`;
+
         response = await fetch(`${config.apiBaseUrl}/chat/completions`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${config.apiKey}`
-            },
+            headers: headers,
             body: JSON.stringify({
                 model: modelToUse,
                 messages: [
@@ -208,11 +238,12 @@ ENHANCED PROMPT:`;
         });
 
         if (!response.ok) {
-            // Only use fallback in ClarityAI mode and when not using an override
-            if (config.apiMode === 'clarityai' && !modelOverride) {
+            // Standard fallback to secondary engine if primary fails
+            if (!modelOverride) {
                 console.warn(`⚠️ Primary engine failed (${response.status}), falling back to secondary engine...`);
                 modelUsed = 'meta/llama-3.3-70b-instruct';
-                response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+                
+                response = await fetch(`${config.apiBaseUrl}/chat/completions`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -242,7 +273,6 @@ ENHANCED PROMPT:`;
                     throw new Error(`API error (both models failed): ${response.status} - ${errorText}`);
                 }
             } else {
-                // In custom mode, just fail with the error
                 const errorText = await response.text();
                 throw new Error(`API error: ${response.status} - ${errorText}`);
             }
@@ -279,7 +309,7 @@ ENHANCED PROMPT:`;
             return improvedPrompt;
         }
         
-        console.log(`✅ API response received and cleaned (mode: ${config.apiMode})`);
+        console.log(`✅ API response received and cleaned`);
         
         return cleanedPrompt;
         
@@ -317,22 +347,13 @@ export async function testExternalLLM(): Promise<boolean> {
 export function getLLMStatus(): {
     isConfigured: boolean;
     provider: string;
-    apiMode: string;
     hasApiKey: boolean;
 } {
     const config = getConfig();
     
-    let providerInfo = 'Unknown';
-    if (config.apiMode === 'clarityai') {
-        providerInfo = 'ClarityAI Engine (Optimized)';
-    } else {
-        providerInfo = 'Custom API Configuration';
-    }
-    
     return {
         isConfigured: validateApiKey(config),
-        provider: providerInfo,
-        apiMode: config.apiMode === 'clarityai' ? 'ClarityAI (Built-in)' : 'Custom API',
+        provider: 'ClarityAI Optimized Engine',
         hasApiKey: config.apiKey.trim() !== ''
     };
 }

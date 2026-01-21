@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getConfig } from './config';
-import { improvePrompt, ConversationContext, analyzePromptQuality } from './autocorrect';
+import { improvePrompt, ConversationContext, analyzePromptQuality, scanForVulnerabilities } from './autocorrect';
 import { forwardToCopilot, debugAvailableCommands } from './forward';
 import { PROMPT_TEMPLATES, getTemplate, fillTemplate, searchTemplates, TEMPLATE_CATEGORIES } from './templates';
 import { injectContextIfEnabled } from './contextInjection';
@@ -20,6 +20,7 @@ let clarityParticipant: vscode.ChatParticipant | undefined;
 let clarityFastParticipant: vscode.ChatParticipant | undefined;
 let clarityThinkingParticipant: vscode.ChatParticipant | undefined;
 let lastEnhancedPrompt: string = '';
+let extensionContext: vscode.ExtensionContext;
 
 /**
  * Extension activation function
@@ -27,6 +28,7 @@ let lastEnhancedPrompt: string = '';
  */
 export function activate(context: vscode.ExtensionContext) {
     console.log('Clarity extension is now active!');
+    extensionContext = context;
 
     // Debug: Log available commands to help with forwarding
     debugAvailableCommands();
@@ -101,34 +103,8 @@ function getFollowupSuggestions(): vscode.ChatFollowup[] {
         ];
     }
 
-    // Context-aware suggestions based on last enhanced prompt
-    return [
-        {
-            prompt: `Make this enhanced prompt even more specific: "${lastEnhancedPrompt}"`,
-            label: '🎯 Add More Detail',
-            command: 'clarity'
-        },
-        {
-            prompt: `Simplify this enhanced prompt for beginners: "${lastEnhancedPrompt}"`,
-            label: '🔰 Make Beginner-Friendly',
-            command: 'clarity'
-        },
-        {
-            prompt: `Simplify this prompt and make it more concise: "${lastEnhancedPrompt}"`,
-            label: '✂️ Simplify Prompt',
-            command: 'clarity'
-        },
-        {
-            prompt: `Add more technical constraints to: "${lastEnhancedPrompt}"`,
-            label: '⚙️ Add Constraints',
-            command: 'clarity'
-        },
-        {
-            prompt: `Convert this to a step-by-step tutorial format: "${lastEnhancedPrompt}"`,
-            label: '📋 Make Step-by-Step',
-            command: 'clarity'
-        }
-    ];
+    // We use action buttons in the response for follow-up refinement
+    return [];
 }
 
 /**
@@ -267,9 +243,9 @@ function showDiffView(stream: vscode.ChatResponseStream, original: string, enhan
         stream.markdown(`- 📜 **Custom Rules applied** - Injected constraints from your .clarityrules file\n`);
     }
     
-    // Highlight key additions with explanations
+    // Highlight key additions with explanations (v1.3.1: Configurable)
     const keyAdditions = extractKeyAdditions(original, enhanced);
-    if (keyAdditions.length > 0) {
+    if (keyAdditions.length > 0 && config.get<boolean>('showEducationalInsights', true)) {
         stream.markdown('\n### 🔑 Key Additions (Why They Matter):\n\n');
         const explanations: Record<string, string> = {
             'TypeScript types specified': 'Type safety prevents bugs and improves code quality',
@@ -302,18 +278,26 @@ function showDiffView(stream: vscode.ChatResponseStream, original: string, enhan
     // Show enhanced with formatting
     stream.markdown('**ClarityAI Enhanced Version:**\n\n');
     
-    // Feature: Visual Preview for Mermaid.js
-    if (enhanced.includes('```mermaid')) {
-        const mermaidMatch = enhanced.match(/```mermaid([\s\S]*?)```/);
+    let enhancedTextToDisplay = enhanced;
+
+    // Feature: Visual Preview for Mermaid.js (v1.3.1: Configurable)
+    if (enhanced.includes('```mermaid') && config.enableMermaid) {
+        const mermaidMatch = enhanced.match(/```mermaid([\s\S]*?)(?:```|$)/);
         if (mermaidMatch) {
-            stream.markdown('### 🖼️ Visual Architecture Preview\n');
-            stream.markdown(mermaidMatch[0] + '\n\n'); // This renders the diagram
+            const mermaidCode = mermaidMatch[1].trim();
+            // Strip the mermaid block from the text so it's not duplicated below
+            enhancedTextToDisplay = enhanced.replace(mermaidMatch[0], '').trim();
+
+            stream.markdown('### 🖼️ Visual Architecture Preview\n\n');
+            // Ensure the block is strictly isolated and correctly closed
+            stream.markdown('```mermaid\n' + mermaidCode + '\n```\n\n');
             
-            // Add a "View in Mermaid Live" action button
-            const encodedMermaid = Buffer.from(mermaidMatch[1].trim()).toString('base64');
+            // Add a "View in Mermaid Live" action button and link
+            const encodedMermaid = Buffer.from(mermaidCode).toString('base64');
             const mermaidLiveUrl = `https://mermaid.live/edit#base64:${encodedMermaid}`;
             
-            stream.markdown(`> 💡 **Tip:** If the diagram above doesn't render, use the button below to view it in the live editor.\n\n`);
+            stream.markdown(`🔗 **[Open in Mermaid Live Editor](${mermaidLiveUrl})**\n\n`);
+            stream.markdown(`> 💡 **Tip:** If the diagram above doesn't render, use the button below or the link above.\n\n`);
             
             stream.button({
                 command: 'clarity.openUrl',
@@ -321,15 +305,12 @@ function showDiffView(stream: vscode.ChatResponseStream, original: string, enhan
                 arguments: [mermaidLiveUrl]
             });
             
-            stream.markdown('\n\n--- \n\n');
+            stream.markdown('\n\n---\n\n');
         }
     }
 
-    const formattedEnhanced = formatEnhancedPrompt(enhanced);
+    const formattedEnhanced = formatEnhancedPrompt(enhancedTextToDisplay);
     stream.markdown(formattedEnhanced + '\n\n');
-    
-    // Educational tip
-    stream.markdown('💡 **Pro Tip:** ' + getRandomTip() + '\n\n');
 }
 
 /**
@@ -339,11 +320,15 @@ function showDiffView(stream: vscode.ChatResponseStream, original: string, enhan
 function formatEnhancedPrompt(prompt: string): string {
     // If the prompt contains code blocks, we need to be careful
     if (prompt.includes('```')) {
-        // Split by code blocks
-        const parts = prompt.split(/(```[\s\S]*?```)/g);
+        // v1.3.x: Better splitting that handles unclosed blocks
+        const parts = prompt.split(/(```[\s\S]*?(?:```|$))/g);
         return parts.map(part => {
             if (part.startsWith('```')) {
-                return part; // Don't format code blocks
+                // Ensure it's closed if the LLM forgot
+                if (!part.endsWith('```') && !part.includes('\n```')) {
+                    return part + '\n```';
+                }
+                return part;
             }
             return formatTextOnly(part);
         }).join('');
@@ -599,7 +584,26 @@ async function handleChatRequest(
             // Use the masked prompt for all subsequent operations
             userPrompt = privacyCheck.maskedPrompt;
         }
+
+        // v1.3.x: Vulnerability Scanner (Logic Checks)
+        const vulnerabilities = scanForVulnerabilities(userPrompt);
+        if (vulnerabilities.length > 0) {
+            stream.markdown(`🚨 **Logic Security Warning!**\n\n`);
+            stream.markdown(`Your prompt contains instructions that could lead to insecure code:\n`);
+            vulnerabilities.forEach(v => stream.markdown(`- ❌ ${v}\n`));
+            stream.markdown(`\n*I will still enhance this, but please review the final output carefully for security best practices.*\n\n---\n\n`);
+        }
         
+        // Handle help sub-command
+        if (request.command === 'help') {
+            return await handleHelpRequest(stream);
+        }
+
+        // Handle Vault sub-command
+        if (request.command === 'vault') {
+            return await handleVaultRequest(stream);
+        }
+
         // Handle edge case: empty prompt
         if (!userPrompt) {
             stream.markdown('❌ **No prompt detected.** Please provide text to improve.');
@@ -631,10 +635,9 @@ async function handleChatRequest(
         // Get current configuration
         const config = getConfig();
         
-        // Validate API key exists
+        // Validate configuration (Built-in key check)
         if (!config.apiKey || config.apiKey.trim() === '') {
-            stream.markdown('❌ **No API key configured!** Please set your API key in settings.\n\n');
-            stream.markdown('Go to Settings → Search "clarity" → Configure your API settings');
+            stream.markdown('❌ **Engine initialization failed.** Please reinstall the extension or contact support.');
             return { metadata: { command: 'clarity', error: 'no_api_key' } };
         }
         
@@ -667,16 +670,17 @@ async function handleChatRequest(
         
         stream.markdown(`${modeDescription}\n\n`);
         
-        // Debug configuration
-        console.log('🔧 Clarity Configuration:', {
+        // Show persona info if subcommand used
+        if (request.command && ['architect', 'security', 'reviewer', 'tester', 'documentation', 'performance', 'frontend'].includes(request.command)) {
+            const personaLabel = request.command.charAt(0).toUpperCase() + request.command.slice(1);
+            stream.markdown(`🎭 **Persona Active:** Enhanced as a **${personaLabel}**\n\n`);
+        }
+
+        // Debug configuration (Internal only)
+        console.log('🔧 Clarity Engine Status:', {
             mode,
-            modelToUse,
-            hasApiKey: !!config.apiKey,
-            apiKeyLength: config.apiKey.length,
-            apiKeyPrefix: config.apiKey.substring(0, 10) + '...',
             contextMessages: conversationContext.previousMessages.length,
             foundTodos: conversationContext.todos.length,
-            foundActions: conversationContext.lastActions.length,
             foundProjectContext: conversationContext.projectContext.length
         });
         
@@ -700,8 +704,16 @@ async function handleChatRequest(
         let improvedPrompt: string;
         let enhancementFailed = false;
         
+        // v1.3.x: Pass command as persona (or default if no command)
+        let effectivePersona = request.command;
+        if (!effectivePersona && config.defaultPersona !== 'none') {
+            effectivePersona = config.defaultPersona;
+            const personaLabel = effectivePersona.charAt(0).toUpperCase() + effectivePersona.slice(1);
+            stream.markdown(`🎭 **Default Persona Applied:** **${personaLabel}**\n\n`);
+        }
+
         try {
-            improvedPrompt = await improvePrompt(userPrompt, conversationContext, modelToUse);
+            improvedPrompt = await improvePrompt(userPrompt, conversationContext, modelToUse, effectivePersona, config.enableMermaid);
         } catch (error) {
             enhancementFailed = true;
             improvedPrompt = userPrompt;
@@ -728,6 +740,12 @@ async function handleChatRequest(
 
         // Store the enhanced prompt for follow-up suggestions
         lastEnhancedPrompt = improvedPrompt;
+
+        // Explicitly break out of any previous markdown context
+        stream.markdown('\n\n<br/>\n\n');
+
+        // Educational tip
+        stream.markdown('💡 **Pro Tip:** ' + getRandomTip() + '\n\n');
 
         // Show action buttons
         stream.markdown('---\n\n');
@@ -782,6 +800,12 @@ async function handleChatRequest(
         stream.button({
             title: '🏗️ Generate Test Cases',
             command: 'clarity.generateTests',
+            arguments: [improvedPrompt]
+        });
+
+        stream.button({
+            title: '🏺 Save to Vault',
+            command: 'clarity.saveToVault',
             arguments: [improvedPrompt]
         });
         
@@ -913,6 +937,73 @@ function registerCommands(context: vscode.ExtensionContext) {
         }
     });
 
+    // v1.3.x: Command: Save to Prompt Vault
+    const saveToVaultCommand = vscode.commands.registerCommand('clarity.saveToVault', async (prompt: string) => {
+        try {
+            const name = await vscode.window.showInputBox({
+                prompt: 'Enter a name for this prompt in your vault',
+                placeHolder: 'e.g., "Full-stack Auth Component"'
+            });
+
+            if (!name) return;
+
+            const storageOption = await vscode.window.showQuickPick(
+                [
+                    { label: '🏠 Local Vault', description: 'Saved only on this machine', value: 'local' },
+                    { label: '👥 Team Vault', description: 'Saved to .clarity/vault.json in this project', value: 'team' }
+                ],
+                { placeHolder: 'Where would you like to save this prompt?' }
+            );
+
+            if (!storageOption) return;
+
+            if (storageOption.value === 'local') {
+                const vault = context.globalState.get<any[]>('clarity.vault', []);
+                vault.push({
+                    name,
+                    prompt,
+                    timestamp: new Date().toISOString(),
+                    type: 'local'
+                });
+                await context.globalState.update('clarity.vault', vault);
+                vscode.window.showInformationMessage(`🏺 Prompt "${name}" saved to Local Vault!`);
+            } else {
+                // Save to Team Vault (.clarity/vault.json)
+                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+                if (!workspaceFolder) {
+                    vscode.window.showErrorMessage('❌ No workspace open. Team Vault requires an open project.');
+                    return;
+                }
+
+                const clarityDir = vscode.Uri.joinPath(workspaceFolder.uri, '.clarity');
+                const vaultUri = vscode.Uri.joinPath(clarityDir, 'vault.json');
+
+                let teamVault: any[] = [];
+                try {
+                    const data = await vscode.workspace.fs.readFile(vaultUri);
+                    teamVault = JSON.parse(data.toString());
+                } catch {
+                    // File doesn't exist, start new
+                    await vscode.workspace.fs.createDirectory(clarityDir);
+                }
+
+                teamVault.push({
+                    name,
+                    prompt,
+                    timestamp: new Date().toISOString(),
+                    author: vscode.env.machineId.substring(0, 8), // Basic ID for team attribution
+                    type: 'team'
+                });
+
+                await vscode.workspace.fs.writeFile(vaultUri, Buffer.from(JSON.stringify(teamVault, null, 2)));
+                vscode.window.showInformationMessage(`👥 Prompt "${name}" added to Team Vault (.clarity/vault.json)!`);
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage('❌ Failed to save to vault.');
+            console.error('Vault error:', error);
+        }
+    });
+
     // Command: Open URL in external browser
     const openUrlCommand = vscode.commands.registerCommand('clarity.openUrl', async (url: string) => {
         try {
@@ -923,6 +1014,22 @@ function registerCommands(context: vscode.ExtensionContext) {
         }
     });
 
+    // Command: Open Vault in Chat
+    const openVaultCommand = vscode.commands.registerCommand('clarity.openVault', async () => {
+        await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
+        await vscode.commands.executeCommand('workbench.action.chat.open', {
+            query: '@clarity /vault'
+        });
+    });
+
+    // Command: Show Help in Chat
+    const showHelpCommand = vscode.commands.registerCommand('clarity.showHelp', async () => {
+        await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
+        await vscode.commands.executeCommand('workbench.action.chat.open', {
+            query: '@clarity /help'
+        });
+    });
+
     // Add commands to subscriptions for proper cleanup
     context.subscriptions.push(
         forwardToCopilotCommand,
@@ -930,8 +1037,110 @@ function registerCommands(context: vscode.ExtensionContext) {
         refinePromptCommand,
         tweakEnhancementCommand,
         generateTestsCommand,
-        openUrlCommand
+        saveToVaultCommand,
+        openUrlCommand,
+        openVaultCommand,
+        showHelpCommand
     );
+}
+
+/**
+ * Handles the /help subcommand to show a dashboard of features
+ */
+async function handleHelpRequest(stream: vscode.ChatResponseStream): Promise<vscode.ChatResult> {
+    stream.markdown('# 🚀 Welcome to ClarityAI v1.3.0\n\n');
+    stream.markdown('I’m your intelligent prompt orchestration layer. I transform basic thoughts into production-ready instructions.\n\n');
+    
+    stream.markdown('### 🎭 Expert Personas\n');
+    stream.markdown('- **`/architect`**: Focuses on scalability, design patterns, and system structure.\n');
+    stream.markdown('- **`/security`**: Focuses on vulnerability prevention and secure coding.\n');
+    stream.markdown('- **`/reviewer`**: Critically analyzes logic and suggests improvements.\n');
+    stream.markdown('- **`/tester`**: Focuses on test coverage, edge cases, and quality.\n');
+    stream.markdown('- **`/documentation`**: Focuses on JSDoc, READMEs, and clarity.\n');
+    stream.markdown('- **`/performance`**: Focuses on optimization and memory management.\n');
+    stream.markdown('- **`/frontend`**: Focuses on UI/UX, A11y, and CSS.\n\n');
+    
+    stream.markdown('### 🛡️ Security & Privacy\n');
+    stream.markdown('- **Secret Shield**: Automatically masks keys/PII locally.\n');
+    stream.markdown('- **Vulnerability Scanner**: Alerts you to insecure logic (eval, SQLi, http).\n\n');
+    
+    stream.markdown('### 🏺 Persistence\n');
+    stream.markdown('- **`/vault`**: Access your private and team-shared prompts.\n');
+    stream.markdown('- **Save Buttons**: Click "Save to Vault" after any enhancement to keep it forever.\n\n');
+    
+    stream.markdown('### ⚙️ Optimization\n');
+    stream.markdown('- **Tech Stack Sync**: Auto-detects versions from `package.json`.\n');
+    stream.markdown('- **Context Compressor**: Prunes workspace metadata to save tokens.\n\n');
+    
+    stream.markdown('---\n');
+    stream.markdown('**Try it now:** Just type your coding request or use a template with `template:rest-api`');
+
+    return { metadata: { command: 'help' } };
+}
+
+/**
+ * Handles the /vault subcommand to list and recall saved prompts
+ */
+async function handleVaultRequest(stream: vscode.ChatResponseStream): Promise<vscode.ChatResult> {
+    const localVault = extensionContext.globalState.get<any[]>('clarity.vault', []);
+    let teamVault: any[] = [];
+
+    // Try to load team vault from workspace
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (workspaceFolder) {
+        try {
+            const vaultUri = vscode.Uri.joinPath(workspaceFolder.uri, '.clarity', 'vault.json');
+            const data = await vscode.workspace.fs.readFile(vaultUri);
+            teamVault = JSON.parse(data.toString());
+        } catch {
+            // No team vault found
+        }
+    }
+    
+    if (localVault.length === 0 && teamVault.length === 0) {
+        stream.markdown('### 🏺 Your Prompt Vault is Empty\n\n');
+        stream.markdown('Save an enhanced prompt by clicking the **Save to Vault** button after any optimization.');
+        return { metadata: { command: 'vault', count: 0 } };
+    }
+
+    if (teamVault.length > 0) {
+        stream.markdown(`### 👥 Team Vault (${teamVault.length} items)\n Shared in this repository via \`.clarity/vault.json\`\n\n`);
+        teamVault.forEach((item, index) => {
+            const date = new Date(item.timestamp).toLocaleDateString();
+            const author = item.author ? ` (by ${item.author})` : '';
+            stream.markdown(`#### ${index + 1}. ${item.name}${author} — ${date}\n`);
+            
+            const preview = item.prompt.length > 200 ? item.prompt.substring(0, 200) + '...' : item.prompt;
+            stream.markdown('```\n' + preview + '\n```\n\n');
+            
+            stream.button({
+                title: `🦾 Use Team: "${item.name}"`,
+                command: 'clarity.forwardToCopilot',
+                arguments: [item.prompt]
+            });
+            stream.markdown('\n\n');
+        });
+    }
+
+    if (localVault.length > 0) {
+        stream.markdown(`### 🏠 Local Vault (${localVault.length} items)\n Only visible on this machine\n\n`);
+        localVault.forEach((item, index) => {
+            const date = new Date(item.timestamp).toLocaleDateString();
+            stream.markdown(`#### ${index + 1}. ${item.name} — ${date}\n`);
+            
+            const preview = item.prompt.length > 200 ? item.prompt.substring(0, 200) + '...' : item.prompt;
+            stream.markdown('```\n' + preview + '\n```\n\n');
+            
+            stream.button({
+                title: `🦾 Use Local: "${item.name}"`,
+                command: 'clarity.forwardToCopilot',
+                arguments: [item.prompt]
+            });
+            stream.markdown('\n\n');
+        });
+    }
+
+    return { metadata: { command: 'vault', count: localVault.length + teamVault.length } };
 }
 
 /**

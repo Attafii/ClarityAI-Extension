@@ -6,17 +6,30 @@ Hey there! Ever asked Copilot to "make a website" and gotten back something gene
 
 ClarityAI acts as an intelligent "translation layer" between you and Copilot. It takes your raw thoughts and transforms them into detailed, professional, and context-aware prompts that get you correct, production-ready code on the first try.
 
-## 🚀 Key Features (v1.3.1)
+## 🚀 Key Features (v1.3.0)
+
+### 🎭 Expert Personas (Subcommands)
+Use specialized experts for different developer tasks.
+- `@clarity /architect`: Focuses on scalability, design patterns, and system structure.
+- `@clarity /security`: Focuses on vulnerabilities, sanitization, and best practices.
+- `@clarity /reviewer`: Meticulously critiques logic and edge cases.
+
+### 🏺 Team Prompt Vault (Sync)
+Standardize your team's prompts by saving them to the repo.
+- **Local Vault**: Private prompts saved only on your machine.
+- **Team Vault**: Shared prompts saved to `.clarity/vault.json` for the whole team.
+
+### 🚨 Logic Vulnerability Scanner
+Scans your prompt for insecure coding instructions (eval, SQLi, insecure HTTP) locally before they ever reach the AI.
 
 ### 📦 Tech Stack Sync (Version-Aware)
-Clarity now reads your `package.json` to detect exact version numbers.
-- **Why it matters**: It tells the AI specifically to use features from your current version (e.g., `TypeScript v5.4`), preventing it from suggesting deprecated or incompatible code.
+Clarity now reads your `package.json` to detect exact version numbers (e.g., `React v18.3`, `TypeScript v5.4`), preventing incompatible code suggestions.
 
 ### 📉 Context Compressor (Token Optimizer)
-Intelligently prunes project context based on your prompt's intent.
-- **Why it matters**: If you're asking about "Buttons", Clarity ignores your "Database schema". This keeps prompts focused, accurate, and significantly reduces token usage.
+Intelligently prunes project context based on your prompt's intent to keep responses focused and accurate.
 
 ### 🛡️ Secret Shield (Privacy Guardrail)
+Automatically masks sensitive data like API keys, secrets, and PII before it leaves your machine.
 ... (existing content)
 
 ### 🤖 Smart Adaptive Routing
@@ -89,28 +102,26 @@ Use a template with parameters:
 
 ## ⚙️ Configuration
 
-ClarityAI is flexible. Go to **Settings (Ctrl+,)** and search for "Clarity" to configure:
+ClarityAI is optimized out of the box. Go to **Settings (Ctrl+,)** and search for "Clarity" to toggle:
 
-1. **API Mode**: 
-   - `clarityai`: Use our optimized, zero-config engine.
-   - `custom`: Connect to any OpenAI-compatible provider (Groq, Nvidia, etc.).
-2. **Context Injection**: Toggle automatic project detection on/off.
-3. **Show Diff View**: Toggle the side-by-side comparison and quality score.
+1. **Context Injection**: Toggle automatic project identification on/off.
+2. **Show Diff View**: Toggle the side-by-side comparison and quality score dashboard.
 
 ---
 
 ## 🔒 Privacy & Performance
 
-- **Privacy First**: ClarityAI only reads metadata (framework names, dependency lists) for context. We never read or store your source code.
-- **Local First**: Initial typo and grammar corrections happen locally on your machine.
+- **Privacy First**: ClarityAI only reads essential metadata (framework names, dependency lists) for context. We never store your source code.
+- **Local First**: Initial typo and grammar corrections, and all security scanning, happen locally on your machine.
+- **Secret Shield**: Your local machine masks secrets before they are sent for enhancement.
 
 ---
 
 ## 🚀 Getting Started
 
 1. Install the extension.
-2. (Optional) Set your API key if using custom mode.
-3. Type `@clarity help` in the chat to see more!
+2. Start typing in chat!
+3. Type `@clarity help` to see the full power of ClarityAI.
 
 ---
 Made by developers, for developers. Because we all deserve better results from AI.

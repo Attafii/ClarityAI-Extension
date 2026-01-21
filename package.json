@@ -2,7 +2,7 @@
   "name": "clarityai",
   "displayName": "ClarityAI - Prompt Improver for Copilot",
   "description": "Improves developer prompts by fixing grammar, spelling, and clarity before sending to Copilot",
-  "version": "1.3.1",
+  "version": "1.3.0",
   "publisher": "AhmedAttafii",
   "author": "Ahmed Attafi",
   "license": "MIT",
@@ -39,7 +39,45 @@
         "id": "clarity",
         "name": "clarity",
         "description": "Intelligently chooses fast or thinking mode based on prompt complexity",
-        "isSticky": false
+        "isSticky": false,
+        "commands": [
+          {
+            "name": "architect",
+            "description": "Enhance prompt with focus on scalability, design patterns, and architecture"
+          },
+          {
+            "name": "security",
+            "description": "Enhance prompt with focus on OWASP, sanitization, and vulnerability prevention"
+          },
+          {
+            "name": "reviewer",
+            "description": "Deeply review and critique the logic of your prompt like a Senior Lead"
+          },
+          {
+            "name": "tester",
+            "description": "Focus on test coverage, edge cases, and quality assurance strategy"
+          },
+          {
+            "name": "documentation",
+            "description": "Focus on JSDoc, READMEs, and technical explanations"
+          },
+          {
+            "name": "performance",
+            "description": "Focus on runtime efficiency, memory management, and optimization"
+          },
+          {
+            "name": "frontend",
+            "description": "Focus on UI/UX, accessibility (A11y), and responsive design"
+          },
+          {
+            "name": "vault",
+            "description": "List and recall your saved enhanced prompts"
+          },
+          {
+            "name": "help",
+            "description": "Show the ClarityAI command guide and feature overview"
+          }
+        ]
       },
       {
         "id": "clarity.fast",
@@ -60,48 +98,25 @@
         "title": "Send to Copilot"
       },
       {
+        "command": "clarity.saveToVault",
+        "title": "Save to Prompt Vault"
+      },
+      {
         "command": "clarity.openUrl",
         "title": "Open URL"
+      },
+      {
+        "command": "clarity.openVault",
+        "title": "Clarity: Open Prompt Vault"
+      },
+      {
+        "command": "clarity.showHelp",
+        "title": "Clarity: Show Command Guide"
       }
     ],
     "configuration": {
       "title": "Clarity",
       "properties": {
-        "clarity.apiMode": {
-          "type": "string",
-          "enum": ["clarityai", "custom"],
-          "default": "clarityai",
-          "description": "Choose API mode: 'clarityai' to use ClarityAI's built-in engine, or 'custom' to use your own API configuration",
-          "enumDescriptions": [
-            "Use ClarityAI's built-in engine (no setup required)",
-            "Use your own custom API configuration"
-          ]
-        },
-        "clarity.apiKey": {
-          "type": "string",
-          "default": "",
-          "description": "Your API key (only required if API Mode is set to 'custom')."
-        },
-        "clarity.apiBaseUrl": {
-          "type": "string",
-          "default": "https://integrate.api.nvidia.com/v1",
-          "description": "API base URL (only used in custom mode)."
-        },
-        "clarity.apiModel": {
-          "type": "string",
-          "default": "deepseek-ai/deepseek-v3.1",
-          "description": "Model identifier (only used in custom mode)."
-        },
-        "clarity.fastModel": {
-          "type": "string",
-          "default": "meta/llama-3.3-70b-instruct",
-          "description": "Model for quick responses (only used in custom mode)."
-        },
-        "clarity.thinkingModel": {
-          "type": "string",
-          "default": "deepseek-ai/deepseek-v3.1",
-          "description": "Model for complex prompts (only used in custom mode)."
-        },
         "clarity.autoInjectContext": {
           "type": "boolean",
           "default": true,
@@ -111,6 +126,32 @@
           "type": "boolean",
           "default": true,
           "description": "Show detailed comparison between original and enhanced prompts"
+        },
+        "clarity.enableMermaid": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically generate architectural Mermaid.js diagrams for complex requests"
+        },
+        "clarity.showEducationalInsights": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show 'Key Additions (Why They Matter)' section in the comparison view"
+        },
+        "clarity.defaultPersona": {
+          "type": "string",
+          "enum": ["none", "architect", "security", "reviewer", "tester", "documentation", "performance", "frontend"],
+          "default": "none",
+          "description": "Sets a default expert persona to use for all prompt enhancements when no subcommand is used",
+          "enumDescriptions": [
+            "No default persona (General mode)",
+            "System Architect (Scalability & Design Patterns)",
+            "Security Expert (Vulnerability Scanner focus)",
+            "Senior Lead Reviewer (Critical logic oversight)",
+            "QA Engineer (Testing & Edge cases)",
+            "Technical Writer (Documentation & Explanation)",
+            "Performance Specialist (Optimization & Efficiency)",
+            "Frontend Expert (UI/UX & Accessibility)"
+          ]
         }
       }
     }

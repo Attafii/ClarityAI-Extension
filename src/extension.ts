@@ -5,6 +5,7 @@ import { forwardToCopilot, debugAvailableCommands } from './forward';
 import { PROMPT_TEMPLATES, getTemplate, fillTemplate, searchTemplates, TEMPLATE_CATEGORIES } from './templates';
 import { injectContextIfEnabled } from './contextInjection';
 import { analyzePromptComplexity, getComplexityDescription } from './complexityAnalyzer';
+import { scanForSecrets } from './privacyGuard';
 
 /**
  * Clarity VS Code Extension - Entry Point
@@ -585,6 +586,18 @@ async function handleChatRequest(
             stream.markdown(`⚠️ **Low Quality Prompt Detected (Score: ${quality.score}/100)**\n`);
             quality.issues.forEach(issue => stream.markdown(`- ${issue}\n`));
             stream.markdown(`\n*I will still try to enhance this, but adding more detail will give better results.*\n\n---\n\n`);
+        }
+
+        // v1.2.x: Secret Shield (Privacy Guardrail)
+        const privacyCheck = scanForSecrets(userPrompt);
+        if (privacyCheck.found) {
+            stream.markdown(`🛡️ **Secret Shield Alert!**\n\n`);
+            stream.markdown(`I detected potential sensitive data in your prompt:\n`);
+            privacyCheck.details.forEach(detail => stream.markdown(`- ⚠️ **${detail}** detected\n`));
+            stream.markdown(`\n**Action Taken:** To protect your privacy, I have **masked** these values before sending them to the AI engine.\n\n---\n\n`);
+            
+            // Use the masked prompt for all subsequent operations
+            userPrompt = privacyCheck.maskedPrompt;
         }
         
         // Handle edge case: empty prompt

@@ -6,7 +6,12 @@ Hey there! Ever asked Copilot to "make a website" and gotten back something gene
 
 ClarityAI acts as an intelligent "translation layer" between you and Copilot. It takes your raw thoughts and transforms them into detailed, professional, and context-aware prompts that get you correct, production-ready code on the first try.
 
-## 🚀 Key Features (v1.2.2)
+## 🚀 Key Features (v1.3.0)
+
+### 🛡️ Secret Shield (Privacy Guardrail)
+Clarity now automatically scans every prompt for sensitive data before it leaves your machine.
+- **Auto-Detection**: Identifies API keys (AWS, Stripe, Google, etc.), passwords, JWTs, and PII.
+- **Automatic Masking**: If a secret is found, Clarity replaces it with a `[REDACTED]` tag and notifies you, ensuring your credentials never leak to the AI.
 
 ### 🤖 Smart Adaptive Routing
 ClarityAI analyzes your prompt's complexity using a specialized scoring algorithm.

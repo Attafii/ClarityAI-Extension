@@ -8,8 +8,8 @@ import * as path from 'path';
 export interface ProjectContext {
     framework?: string;
     language?: string;
-    dependencies?: string[];
-    devDependencies?: string[];
+    dependencies?: Record<string, string>; // name -> version
+    devDependencies?: Record<string, string>; // name -> version
     activeFile?: {
         language: string;
         relativePath: string;
@@ -110,7 +110,7 @@ async function generateWorkspaceMap(): Promise<string[]> {
 }
 
 /**
- * Read and parse package.json
+ * Reads and parses package.json
  */
 async function readPackageJson(): Promise<Partial<ProjectContext> | null> {
     try {
@@ -124,21 +124,24 @@ async function readPackageJson(): Promise<Partial<ProjectContext> | null> {
         const packageJson = JSON.parse(content.toString());
         
         const context: Partial<ProjectContext> = {
-            dependencies: packageJson.dependencies ? Object.keys(packageJson.dependencies) : [],
-            devDependencies: packageJson.devDependencies ? Object.keys(packageJson.devDependencies) : []
+            dependencies: packageJson.dependencies || {},
+            devDependencies: packageJson.devDependencies || {}
         };
         
         // Detect framework
-        context.framework = detectFramework(context.dependencies || [], context.devDependencies || []);
+        context.framework = detectFramework(
+            Object.keys(context.dependencies || {}), 
+            Object.keys(context.devDependencies || {})
+        );
         
         // Detect TypeScript
         context.hasTypeScript = 
-            (context.devDependencies?.includes('typescript')) ||
-            (context.dependencies?.includes('typescript')) ||
+            (context.devDependencies && 'typescript' in context.devDependencies) ||
+            (context.dependencies && 'typescript' in context.dependencies) ||
             false;
             
         // Detect test framework
-        context.hasTests = detectTestFramework(context.devDependencies || []);
+        context.hasTests = detectTestFramework(Object.keys(context.devDependencies || {}));
         
         // Detect build tool
         context.buildTool = detectBuildTool(packageJson.scripts || {});
@@ -148,6 +151,41 @@ async function readPackageJson(): Promise<Partial<ProjectContext> | null> {
         // package.json doesn't exist or can't be read
         return null;
     }
+}
+
+/**
+ * Prunes the workspace map based on the prompt content to save tokens
+ */
+function pruneWorkspaceMap(map: string[], prompt: string): string[] {
+    const promptLower = prompt.toLowerCase();
+    
+    // Keywords for different modules
+    const domainKeywords: Record<string, string[]> = {
+        'ui': ['ui', 'component', 'button', 'form', 'layout', 'style', 'color', 'theme', 'view', 'page'],
+        'auth': ['auth', 'login', 'security', 'token', 'user', 'session', 'permission', 'role'],
+        'db': ['db', 'database', 'model', 'schema', 'prisma', 'mongoose', 'sql', 'query', 'entity'],
+        'api': ['api', 'route', 'endpoint', 'fetch', 'server', 'request', 'response', 'rest', 'graphql'],
+        'test': ['test', 'spec', 'jest', 'vitest', 'playwright', 'expect', 'assert']
+    };
+
+    // Determine relevant domains
+    const relevantDomains = Object.keys(domainKeywords).filter(domain => 
+        domainKeywords[domain].some(keyword => promptLower.includes(keyword))
+    );
+
+    // If no specific domains detected, keep a shorter overview (max 10)
+    if (relevantDomains.length === 0) {
+        return map.slice(0, 10);
+    }
+
+    // Filter map by relevant domains
+    const filtered = map.filter(entry => 
+        relevantDomains.some(domain => entry.toLowerCase().includes(domain) || 
+                                     domainKeywords[domain].some(kw => entry.toLowerCase().includes(kw)))
+    );
+
+    // Ensure we don't return an empty map, and cap it at 20 entries
+    return filtered.length > 0 ? filtered.slice(0, 20) : map.slice(0, 10);
 }
 
 /**
@@ -221,15 +259,34 @@ export function generateContextString(context: ProjectContext, includeFile: bool
     
     // Framework and language
     const tech: string[] = [];
-    if (context.framework) tech.push(context.framework);
-    if (context.hasTypeScript) tech.push('TypeScript');
+    if (context.framework) {
+        let fwName = context.framework;
+        const allDeps = { ...(context.dependencies || {}), ...(context.devDependencies || {}) };
+        const fwKey = fwName.toLowerCase().includes('next') ? 'next' : 
+                    fwName.toLowerCase().includes('react') ? 'react' :
+                    fwName.toLowerCase().includes('vue') ? 'vue' :
+                    fwName.toLowerCase().includes('angular') ? '@angular/core' :
+                    fwName.toLowerCase().includes('svelte') ? 'svelte' : '';
+        
+        if (fwKey && allDeps[fwKey]) {
+            fwName += ` (v${allDeps[fwKey].replace(/[\^~]/, '')})`;
+        }
+        tech.push(fwName);
+    }
+    
+    if (context.hasTypeScript) {
+        const tsVersion = (context.devDependencies && context.devDependencies['typescript']) || 
+                         (context.dependencies && context.dependencies['typescript']);
+        tech.push(`TypeScript${tsVersion ? ` (v${tsVersion.replace(/[\^~]/, '')})` : ''}`);
+    }
+    
     if (context.language && !context.hasTypeScript) tech.push(context.language);
     if (tech.length > 0) {
         parts.push(`Tech stack: ${tech.join(', ')}`);
     }
     
     // Key dependencies (limit to most important)
-    const keyDeps = getKeyDependencies(context.dependencies || []);
+    const keyDeps = getKeyDependencies(context.dependencies || {});
     if (keyDeps.length > 0) {
         parts.push(`Using: ${keyDeps.join(', ')}`);
     }
@@ -241,10 +298,12 @@ export function generateContextString(context: ProjectContext, includeFile: bool
     
     // Test framework
     if (context.hasTests) {
-        const testFramework = (context.devDependencies || [])
+        const testDep = Object.keys(context.devDependencies || {})
             .find(dep => dep.includes('jest') || dep.includes('vitest') || dep.includes('mocha'));
-        if (testFramework) {
-            parts.push(`Tests: ${testFramework}`);
+        
+        if (testDep) {
+            const version = (context.devDependencies || {})[testDep];
+            parts.push(`Tests: ${testDep}${version ? ` (v${version.replace(/[\^~]/, '')})` : ''}`);
         }
     }
     
@@ -268,7 +327,7 @@ export function generateContextString(context: ProjectContext, includeFile: bool
 /**
  * Get key dependencies to mention (filter out common/less relevant ones)
  */
-function getKeyDependencies(deps: string[]): string[] {
+function getKeyDependencies(deps: Record<string, string>): string[] {
     const important = [
         'tailwindcss',
         'prisma',
@@ -290,8 +349,9 @@ function getKeyDependencies(deps: string[]): string[] {
         'shadcn'
     ];
     
-    return deps
-        .filter(dep => important.some(imp => dep.includes(imp)))
+    return Object.entries(deps)
+        .filter(([name]) => important.some(imp => name.includes(imp)))
+        .map(([name, version]) => `${name} (v${version.replace(/[\^~]/, '')})`)
         .slice(0, 5); // Limit to 5 most relevant
 }
 
@@ -312,6 +372,12 @@ export async function injectContextIfEnabled(prompt: string): Promise<string> {
     }
     
     const context = await extractProjectContext();
+    
+    // v1.3.1: Apply Context Compression (Token Optimization)
+    if (context.workspaceMap) {
+        context.workspaceMap = pruneWorkspaceMap(context.workspaceMap, prompt);
+    }
+
     const contextString = generateContextString(context);
     
     if (contextString) {

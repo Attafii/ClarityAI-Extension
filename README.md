@@ -12,8 +12,6 @@ Explore the live site: https://clarity-ai.app • Install: https://marketplace.v
 
 ---
 
-## Quick demo
-
 <img width="771" height="440" alt="image" src="https://github.com/user-attachments/assets/61afa11e-aa32-4ba5-84a7-24639490048e" />
 
 

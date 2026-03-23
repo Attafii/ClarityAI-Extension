@@ -6,6 +6,8 @@ import { PROMPT_TEMPLATES, getTemplate, fillTemplate, searchTemplates, TEMPLATE_
 import { injectContextIfEnabled } from './contextInjection';
 import { analyzePromptComplexity, getComplexityDescription } from './complexityAnalyzer';
 import { scanForSecrets } from './privacyGuard';
+import { TeamVaultManager } from './teamVault';
+import { PromptSuggestionsManager } from './promptSuggestions';
 
 /**
  * Clarity VS Code Extension - Entry Point
@@ -21,6 +23,8 @@ let clarityFastParticipant: vscode.ChatParticipant | undefined;
 let clarityThinkingParticipant: vscode.ChatParticipant | undefined;
 let lastEnhancedPrompt: string = '';
 let extensionContext: vscode.ExtensionContext;
+let teamVaultManager: TeamVaultManager;
+let suggestionsManager: PromptSuggestionsManager;
 
 /**
  * Extension activation function
@@ -29,6 +33,10 @@ let extensionContext: vscode.ExtensionContext;
 export function activate(context: vscode.ExtensionContext) {
     console.log('Clarity extension is now active!');
     extensionContext = context;
+
+    // Initialize Phase 2 Week 2 managers
+    teamVaultManager = new TeamVaultManager(context, {} as any); // Logger will be added in Phase 3
+    suggestionsManager = new PromptSuggestionsManager({} as any); // Logger will be added in Phase 3
 
     // Debug: Log available commands to help with forwarding
     debugAvailableCommands();
@@ -1030,6 +1038,56 @@ function registerCommands(context: vscode.ExtensionContext) {
         });
     });
 
+    // Command: Submit prompt to vault for team approval
+    const submitToVaultCommand = vscode.commands.registerCommand('clarity.vault.submit', async (title: string, enhancedPrompt: string) => {
+        try {
+            const result = await teamVaultManager.saveToDraft(title, '', enhancedPrompt, ['user-submitted']);
+            if (result) {
+                await teamVaultManager.submitForApproval(result.id, 'User-submitted prompt for team review');
+                vscode.window.showInformationMessage('📬 Prompt submitted to team vault for approval!');
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage('❌ Failed to submit prompt to vault.');
+            console.error('Vault submission failed:', error);
+        }
+    });
+
+    // Command: Show prompt suggestions
+    const suggestionsCommand = vscode.commands.registerCommand('clarity.suggestions.show', async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showInformationMessage('No active editor. Open a file to get suggestions.');
+            return;
+        }
+
+        try {
+            const suggestions = await suggestionsManager.getSuggestions(editor, 5);
+            if (suggestions.length === 0) {
+                vscode.window.showInformationMessage('No suggestions available for this file.');
+                return;
+            }
+
+            const selected = await vscode.window.showQuickPick(
+                suggestions.map((s) => ({
+                    label: `$(sparkle) ${s.title}`,
+                    description: s.description,
+                    detail: s.prompt.substring(0, 60) + '...',
+                    suggestion: s
+                })),
+                { placeHolder: 'Choose a suggestion to use in @clarity' }
+            );
+
+            if (selected) {
+                await vscode.env.clipboard.writeText(selected.suggestion.prompt);
+                await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
+                vscode.window.showInformationMessage('💡 Suggestion copied to clipboard. Paste in @clarity chat!');
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage('❌ Failed to generate suggestions.');
+            console.error('Suggestions error:', error);
+        }
+    });
+
     // Add commands to subscriptions for proper cleanup
     context.subscriptions.push(
         forwardToCopilotCommand,
@@ -1040,7 +1098,9 @@ function registerCommands(context: vscode.ExtensionContext) {
         saveToVaultCommand,
         openUrlCommand,
         openVaultCommand,
-        showHelpCommand
+        showHelpCommand,
+        submitToVaultCommand,
+        suggestionsCommand
     );
 }
 

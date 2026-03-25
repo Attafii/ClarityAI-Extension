@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClarityAI Analytics Dashboard</title>
+    <link rel="stylesheet" href="${webviewUri}/styles/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        :root {
+            --vscode-foreground: #333;
+            --vscode-editor-background: #ffffff;
+            --vscode-editor-lineHighlightBackground: #f5f5f5;
+            --vscode-button-background: #007acc;
+            --vscode-button-foreground: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            --vscode-foreground: #e0e0e0;
+            --vscode-editor-background: #1e1e1e;
+            --vscode-editor-lineHighlightBackground: #2d2d2d;
+            --vscode-button-background: #0e639c;
+            --vscode-button-foreground: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <h1>📊 ClarityAI Analytics Dashboard</h1>
+            <div class="header-actions">
+                <button id="refreshBtn" class="btn btn-secondary">🔄 Refresh</button>
+                <button id="exportCsvBtn" class="btn btn-secondary">📥 Export CSV</button>
+                <button id="exportJsonBtn" class="btn btn-secondary">📥 Export JSON</button>
+            </div>
+        </header>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading metrics...</p>
+        </div>
+
+        <!-- Dashboard Content (hidden until loaded) -->
+        <div id="dashboardContent" class="dashboard-content" style="display: none;">
+
+            <!-- Metrics Grid -->
+            <section class="metrics-section">
+                <h2>Vault Metrics</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">📦</div>
+                        <div class="metric-content">
+                            <p class="metric-label">Total Items</p>
+                            <p class="metric-value" id="totalVault">0</p>
+                            <p class="metric-detail" id="totalDetail">—</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">✍️</div>
+                        <div class="metric-content">
+                            <p class="metric-label">Draft Prompts</p>
+                            <p class="metric-value" id="draftCount">0</p>
+                            <p class="metric-detail" id="draftDetail">—</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">⏳</div>
+                        <div class="metric-content">
+                            <p class="metric-label">Pending Approval</p>
+                            <p class="metric-value" id="pendingCount">0</p>
+                            <p class="metric-detail" id="pendingDetail">—</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">✅</div>
+                        <div class="metric-content">
+                            <p class="metric-label">Approved</p>
+                            <p class="metric-value" id="approvedCount">0</p>
+                            <p class="metric-detail" id="approvedDetail">—</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">👥</div>
+                        <div class="metric-content">
+                            <p class="metric-label">Team Members</p>
+                            <p class="metric-value" id="teamCount">0</p>
+                            <p class="metric-detail" id="teamDetail">—</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">📈</div>
+                        <div class="metric-content">
+                            <p class="metric-label">Total Usage</p>
+                            <p class="metric-value" id="usageCount">0</p>
+                            <p class="metric-detail" id="usageDetail">times</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="charts-section">
+                <div class="chart-container">
+                    <h2>7-Day Trend</h2>
+                    <canvas id="trendChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h2>Approval Status</h2>
+                    <canvas id="statusChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h2>Team Activity</h2>
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Team Leaderboard -->
+            <section class="leaderboard-section">
+                <h2>🏆 Team Leaderboard</h2>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Contributor</th>
+                            <th>Prompts Created</th>
+                            <th>Approvals</th>
+                            <th>Usage</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody">
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                No team data yet. Create prompts to get started!
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Top Prompts -->
+            <section class="top-prompts-section">
+                <h2>⭐ Most Used Prompts</h2>
+                <div class="prompts-list" id="topPromptsList">
+                    <p class="empty-state">No prompts used yet.</p>
+                </div>
+            </section>
+
+            <!-- Error State -->
+            <div id="errorState" class="error-state" style="display: none;">
+                <p>⚠️ Failed to load dashboard metrics</p>
+                <p class="error-detail" id="errorDetail"></p>
+                <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+
+        // Initialize dashboard
+        function initDashboard() {
+            const loadingState = document.getElementById('loadingState');
+            const dashboardContent = document.getElementById('dashboardContent');
+            const errorState = document.getElementById('errorState');
+
+            // Request metrics from extension
+            vscode.postMessage({
+                command: 'getDashboardMetrics'
+            });
+
+            // Listen for messages from extension
+            window.addEventListener('message', event => {
+                const message = event.data;
+
+                if (message.command === 'updateMetrics') {
+                    loadingState.style.display = 'none';
+                    dashboardContent.style.display = 'block';
+                    errorState.style.display = 'none';
+
+                    updateMetrics(message.data);
+                    renderCharts(message.data);
+                } else if (message.command === 'error') {
+                    loadingState.style.display = 'none';
+                    dashboardContent.style.display = 'none';
+                    errorState.style.display = 'block';
+                    document.getElementById('errorDetail').textContent = message.error;
+                }
+            });
+
+            // Setup button handlers
+            document.getElementById('refreshBtn').addEventListener('click', () => {
+                loadingState.style.display = 'flex';
+                dashboardContent.style.display = 'none';
+                vscode.postMessage({ command: 'getDashboardMetrics' });
+            });
+
+            document.getElementById('exportCsvBtn').addEventListener('click', () => {
+                vscode.postMessage({ command: 'exportMetricsCSV' });
+            });
+
+            document.getElementById('exportJsonBtn').addEventListener('click', () => {
+                vscode.postMessage({ command: 'exportMetricsJSON' });
+            });
+        }
+
+        // Update metric cards
+        function updateMetrics(data) {
+            document.getElementById('totalVault').textContent = data.totalVault || 0;
+            document.getElementById('draftCount').textContent = data.draftCount || 0;
+            document.getElementById('pendingCount').textContent = data.pendingCount || 0;
+            document.getElementById('approvedCount').textContent = data.approvedCount || 0;
+            document.getElementById('teamCount').textContent = data.teamMembers || 0;
+            document.getElementById('usageCount').textContent = data.totalUsage || 0;
+
+            // Calculate percentages for details
+            const total = data.totalVault || 1;
+            document.getElementById('totalDetail').textContent =
+                `${Math.round((data.approvedCount / total) * 100)}% approved`;
+            document.getElementById('draftDetail').textContent =
+                `${Math.round((data.draftCount / total) * 100)}% of total`;
+            document.getElementById('pendingDetail').textContent =
+                `${Math.round((data.pendingCount / total) * 100)}% pending`;
+            document.getElementById('approvedDetail').textContent =
+                `${Math.round((data.approvedCount / total) * 100)}% of total`;
+
+            // Update leaderboard
+            updateLeaderboard(data.teamLeaderboard || []);
+
+            // Update top prompts
+            updateTopPrompts(data.topPrompts || []);
+        }
+
+        // Render charts
+        function renderCharts(data) {
+            // Trend chart (7-day data)
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: data.trendDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Vault Items',
+                        data: data.trendData || [0, 0, 0, 0, 0, 0, 0],
+                        borderColor: '#007acc',
+                        backgroundColor: 'rgba(0, 122, 204, 0.1)',
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: true } }
+                }
+            });
+
+            // Status chart (pie)
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Approved', 'Pending', 'Draft'],
+                    datasets: [{
+                        data: [
+                            data.approvedCount || 0,
+                            data.pendingCount || 0,
+                            data.draftCount || 0
+                        ],
+                        backgroundColor: ['#28a745', '#ffc107', '#6c757d']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // Activity chart (bar)
+            const activityCtx = document.getElementById('activityChart').getContext('2d');
+            const teamData = data.teamLeaderboard || [];
+            new Chart(activityCtx, {
+                type: 'bar',
+                data: {
+                    labels: teamData.slice(0, 5).map(t => t.name || 'Unknown'),
+                    datasets: [{
+                        label: 'Prompts Created',
+                        data: teamData.slice(0, 5).map(t => t.promptsCreated || 0),
+                        backgroundColor: '#007acc'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    indexAxis: 'y'
+                }
+            });
+        }
+
+        // Update leaderboard table
+        function updateLeaderboard(leaderboard) {
+            const tbody = document.getElementById('leaderboardBody');
+
+            if (leaderboard.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            No team data yet. Create prompts to get started!
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = leaderboard.map((member, index) => `
+                <tr>
+                    <td class="rank">${index + 1}</td>
+                    <td>${member.name || 'Unknown'}</td>
+                    <td>${member.promptsCreated || 0}</td>
+                    <td>${member.approvals || 0}</td>
+                    <td>${member.usage || 0}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Update top prompts list
+        function updateTopPrompts(prompts) {
+            const list = document.getElementById('topPromptsList');
+
+            if (prompts.length === 0) {
+                list.innerHTML = '<p class="empty-state">No prompts used yet.</p>';
+                return;
+            }
+
+            list.innerHTML = prompts.map(prompt => `
+                <div class="prompt-item">
+                    <div class="prompt-title">${prompt.title || 'Untitled'}</div>
+                    <div class="prompt-usage">Used ${prompt.usage || 0} times</div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>

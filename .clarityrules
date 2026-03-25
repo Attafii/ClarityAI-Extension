@@ -1,0 +1,16 @@
+# ClarityAI Project Rules
+
+## Design Philosophy (@clarity-thinking)
+When asked to make things "modern and elegant":
+1.  **Typography**: Suggest high-quality sans-serif fonts (Inter, Geist, or SF Pro). Use generous tracking (letter-spacing: -0.02em) for headings.
+2.  **Space**: Use "Extreme Whitespace." Increase padding/margins by 1.5x what you think is standard.
+3.  **Color**: Use a "Subtle Dark" palette (background: #0a0a0a) with accents of pure white and subtle borders (#ffffff10).
+4.  **Glassmorphism**: Use `backdrop-filter: blur(12px)` for headers and cards.
+5.  **Motion**: Suggest subtle CSS transitions (e.g., `cubic-bezier(0.4, 0, 0.2, 1)`) for all hover states.
+6.  **Simplicity**: Remove any unnecessary borders, shadows, or secondary text. If a feature isn't essential, hide it.
+
+## Technical Standards
+- **Database**: Use Neon (Postgres) for all data persistence.
+- **Frontend**: Next.js (App Router preferred) with Tailwind CSS.
+- **Auth**: Use Clerk or Supabase Auth.
+- **Tone**: Professional, concise, and technically rigorous.

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClarityAI Onboarding</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .onboarding-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--vscode-editor-background);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 40px;
+            padding: 0 10px;
+        }
+
+        .progress-step {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background-color: var(--vscode-editorWidget-background);
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.active {
+            background-color: var(--vscode-editorWarning-foreground);
+            opacity: 0.7;
+        }
+
+        .progress-step.current {
+            background-color: #007ACC;
+            box-shadow: 0 0 8px rgba(0, 122, 204, 0.5);
+        }
+
+        /* Content */
+        .onboarding-content {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .step-description {
+            font-size: 15px;
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .step-content {
+            margin-bottom: 40px;
+            min-height: 200px;
+        }
+
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .feature-card {
+            padding: 20px;
+            border: 1px solid var(--vscode-editorWidget-border);
+            border-radius: 8px;
+            background-color: var(--vscode-editorWidget-background);
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .feature-card:hover {
+            border-color: #007ACC;
+            background-color: var(--vscode-editorHoverWidget-background);
+            transform: translateY(-2px);
+        }
+
+        .feature-card .icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .feature-card h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .feature-card p {
+            font-size: 13px;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        /* Persona Intro */
+        .persona-intro {
+            text-align: center;
+        }
+
+        .persona-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .persona-intro h2 {
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+
+        .persona-description {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .use-case {
+            margin: 20px 0;
+            padding: 12px;
+            background-color: var(--vscode-editorWidget-background);
+            border-left: 3px solid #007ACC;
+            border-radius: 4px;
+        }
+
+        .example {
+            margin-top: 20px;
+            padding: 16px;
+            background-color: var(--vscode-editorWidget-background);
+            border-radius: 6px;
+            text-align: left;
+        }
+
+        .example strong {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .example-input,
+        .example-output {
+            font-size: 13px;
+            color: var(--vscode-descriptionForeground);
+            margin: 4px 0;
+        }
+
+        /* Demo */
+        .demo .demo-box {
+            padding: 20px;
+            margin: 12px 0;
+            background-color: var(--vscode-editorWidget-background);
+            border: 2px solid var(--vscode-editorWidget-border);
+            border-radius: 8px;
+        }
+
+        .demo .demo-box.enhanced {
+            border-color: #007ACC;
+            background-color: rgba(0, 122, 204, 0.1);
+        }
+
+        .demo .demo-box h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .demo .demo-text {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .demo .arrow {
+            text-align: center;
+            font-size: 20px;
+            color: #007ACC;
+            margin: 10px 0;
+        }
+
+        .demo-note {
+            text-align: center;
+            font-size: 13px;
+            color: var(--vscode-descriptionForeground);
+            margin-top: 20px;
+            font-style: italic;
+        }
+
+        /* Preferences */
+        .preferences {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background-color: var(--vscode-editorWidget-background);
+            border-radius: 6px;
+            cursor: pointer;
+            user-select: none;
+            border: 1px solid var(--vscode-editorWidget-border);
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-label:hover {
+            background-color: var(--vscode-editorHoverWidget-background);
+            border-color: #007ACC;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 12px;
+            cursor: pointer;
+            accent-color: #007ACC;
+        }
+
+        .checkbox-label span {
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .info-box {
+            padding: 16px;
+            background-color: rgba(0, 122, 204, 0.1);
+            border-left: 4px solid #007ACC;
+            border-radius: 4px;
+            margin-top: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--vscode-editorWidget-border);
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: #007ACC;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #005A9E;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background-color: var(--vscode-editorWidget-background);
+            color: var(--vscode-foreground);
+            border: 1px solid var(--vscode-editorWidget-border);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--vscode-editorHoverWidget-background);
+            border-color: #007ACC;
+        }
+
+        .btn-tertiary {
+            background-color: transparent;
+            color: var(--vscode-descriptionForeground);
+            border: 1px solid var(--vscode-editorWidget-border);
+        }
+
+        .btn-tertiary:hover {
+            color: var(--vscode-foreground);
+            border-color: var(--vscode-foreground);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="onboarding-container">
+        <div class="progress-bar">
+            <div class="progress-step active current"></div>
+            <div class="progress-step"></div>
+            <div class="progress-step"></div>
+            <div class="progress-step"></div>
+            <div class="progress-step"></div>
+            <div class="progress-step"></div>
+        </div>
+
+        <div class="onboarding-content">
+            <h1>Welcome to ClarityAI</h1>
+            <p class="step-description">
+                Transform your prompts into powerful instructions for GitHub Copilot. Let's get you set up in just a few steps!
+            </p>
+
+            <div class="step-content">
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="icon">🎯</div>
+                        <h3>Smart Enhancement</h3>
+                        <p>AI-powered prompt improvement based on your field</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">🎭</div>
+                        <h3>Expert Personas</h3>
+                        <p>Architect, Security, Reviewer, Tester, and more</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">🔍</div>
+                        <h3>Privacy First</h3>
+                        <p>Secret Shield protects sensitive data</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">📚</div>
+                        <h3>Prompt Library</h3>
+                        <p>Save and reuse prompts with your team</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-tertiary" id="skip-btn">Skip</button>
+                <button class="btn-primary" id="next-btn">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+
+        document.getElementById('next-btn')?.addEventListener('click', () => {
+            vscode.postMessage({ command: 'next-step', currentStep: 0 });
+        });
+
+        document.getElementById('prev-btn')?.addEventListener('click', () => {
+            vscode.postMessage({ command: 'previous-step', currentStep: 0 });
+        });
+
+        document.getElementById('complete-btn')?.addEventListener('click', () => {
+            vscode.postMessage({ command: 'complete-onboarding' });
+        });
+
+        document.getElementById('skip-btn')?.addEventListener('click', () => {
+            vscode.postMessage({ command: 'skip-onboarding' });
+        });
+
+        // Handle preference changes
+        document.querySelectorAll('.checkbox-label input[type="checkbox"]').forEach(input => {
+            input.addEventListener('change', () => {
+                const id = input.id;
+                const key = id.replace('pref-', '');
+                vscode.postMessage({ command: 'set-preference', key, value: input.checked });
+            });
+        });
+    </script>
+</body>
+</html>

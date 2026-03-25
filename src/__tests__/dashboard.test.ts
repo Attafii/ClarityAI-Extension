@@ -25,7 +25,8 @@ describe('Dashboard - DashboardDataManager', () => {
         jest.clearAllMocks();
         mockContext.globalState.get.mockReturnValue(Promise.resolve(null));
         mockContext.globalState.update.mockReturnValue(Promise.resolve());
-        vaultManager = new TeamVaultManager(mockContext as any, {} as any);
+        const mockLogger = (globalThis as any).createMockLogger();
+        vaultManager = new TeamVaultManager(mockContext as any, mockLogger);
         analytics = new AnalyticsManager();
         dashboardData = new DashboardDataManager(mockContext as any, vaultManager, analytics);
     });

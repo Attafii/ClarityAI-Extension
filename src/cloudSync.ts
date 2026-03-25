@@ -142,16 +142,13 @@ export class CloudSyncManager {
    * Setup network detection
    */
   private setupNetworkDetection(): void {
-    window.addEventListener('online', () => {
-      this.isOnline = true;
-      this.updateStatusBar();
-      this.processSyncQueue();
-    });
+    // In VS Code extension, detect online/offline state
+    // Note: Full implementation would use system network APIs
+    // For now, we'll set online to true by default and detect failures through sync attempts
+    this.isOnline = true;
 
-    window.addEventListener('offline', () => {
-      this.isOnline = false;
-      this.updateStatusBar();
-    });
+    // Could be extended with actual network monitoring if needed
+    // For Phase 3, we rely on sync operation failures to detect offline state
   }
 
   /**

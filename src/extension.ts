@@ -8,6 +8,13 @@ import { analyzePromptComplexity, getComplexityDescription } from './complexityA
 import { scanForSecrets } from './privacyGuard';
 import { TeamVaultManager } from './teamVault';
 import { PromptSuggestionsManager } from './promptSuggestions';
+import { CloudSyncManager } from './cloudSync';
+import { DashboardProvider } from './dashboard/dashboardProvider';
+import { DashboardDataManager } from './dashboard/dashboardData';
+import { AdvancedWorkflowManager } from './advancedWorkflows';
+import { ClarityLogger } from './logger';
+import { ErrorTracker } from './errorTracking';
+import { AnalyticsManager } from './analytics';
 
 /**
  * Clarity VS Code Extension - Entry Point
@@ -25,6 +32,13 @@ let lastEnhancedPrompt: string = '';
 let extensionContext: vscode.ExtensionContext;
 let teamVaultManager: TeamVaultManager;
 let suggestionsManager: PromptSuggestionsManager;
+let cloudSyncManager: CloudSyncManager;
+let dashboardProvider: DashboardProvider;
+let dashboardDataManager: DashboardDataManager;
+let workflowManager: AdvancedWorkflowManager;
+let clarityLogger: ClarityLogger;
+let errorTracker: ErrorTracker;
+let analyticsManager: AnalyticsManager;
 
 /**
  * Extension activation function
@@ -34,9 +48,31 @@ export function activate(context: vscode.ExtensionContext) {
     console.log('Clarity extension is now active!');
     extensionContext = context;
 
-    // Initialize Phase 2 Week 2 managers
-    teamVaultManager = new TeamVaultManager(context, {} as any); // Logger will be added in Phase 3
-    suggestionsManager = new PromptSuggestionsManager({} as any); // Logger will be added in Phase 3
+    // Initialize Phase 1-3 infrastructure
+    clarityLogger = new ClarityLogger();
+    const outputChannel = vscode.window.createOutputChannel('ClarityAI');
+    clarityLogger.initialize(outputChannel);
+    errorTracker = new ErrorTracker();
+    errorTracker.initialize('posthog-key-placeholder', false);
+    analyticsManager = new AnalyticsManager('posthog-key-placeholder');
+
+    // Initialize Phase 2 managers
+    teamVaultManager = new TeamVaultManager(context, clarityLogger);
+    suggestionsManager = new PromptSuggestionsManager(clarityLogger);
+
+    // Initialize Phase 3 managers
+    cloudSyncManager = new CloudSyncManager(context);
+    dashboardDataManager = new DashboardDataManager(context, teamVaultManager, analyticsManager);
+    dashboardProvider = new DashboardProvider(context, teamVaultManager, analyticsManager);
+    workflowManager = new AdvancedWorkflowManager(context);
+
+    // Register dashboard webview
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(
+            'clarity-dashboard',
+            dashboardProvider
+        )
+    );
 
     // Debug: Log available commands to help with forwarding
     debugAvailableCommands();
@@ -1088,6 +1124,69 @@ function registerCommands(context: vscode.ExtensionContext) {
         }
     });
 
+    // Command: Setup Cloud Sync (Phase 3)
+    const setupCloudSyncCommand = vscode.commands.registerCommand('clarity.setupCloudSync', async () => {
+        try {
+            const selected = await vscode.window.showQuickPick(
+                ['Azure Blob Storage', 'AWS S3', 'Firebase', 'None (Disable)'],
+                { placeHolder: 'Select cloud provider for vault sync' }
+            );
+
+            if (!selected) return;
+
+            const providerMap: { [key: string]: 'azure' | 'aws' | 'firebase' | 'none' } = {
+                'Azure Blob Storage': 'azure',
+                'AWS S3': 'aws',
+                'Firebase': 'firebase',
+                'None (Disable)': 'none'
+            };
+
+            const provider = providerMap[selected];
+            await cloudSyncManager.initializeSync(provider);
+
+            if (provider !== 'none') {
+                vscode.window.showInformationMessage(`✅ Cloud sync configured for ${selected}`);
+            } else {
+                vscode.window.showInformationMessage('Cloud sync disabled');
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to setup cloud sync: ${error}`);
+        }
+    });
+
+    // Command: Open Dashboard (Phase 3)
+    const openDashboardCommand = vscode.commands.registerCommand('clarity.openDashboard', async () => {
+        try {
+            await vscode.commands.executeCommand('clarity-dashboard.focus');
+            vscode.window.showInformationMessage('📊 Dashboard opened');
+        } catch (error) {
+            vscode.window.showErrorMessage('Failed to open dashboard');
+        }
+    });
+
+    // Command: Show Cloud Sync Status (Phase 3)
+    const showSyncStatusCommand = vscode.commands.registerCommand('clarity.showSyncStatus', async () => {
+        try {
+            const status = cloudSyncManager.getStatus();
+            const message = `Cloud Sync Status:\nEnabled: ${status.enabled}\nProvider: ${status.provider}\nOnline: ${status.isOnline}\nSyncing: ${status.isSyncing}`;
+            await vscode.window.showInformationMessage(message);
+        } catch (error) {
+            vscode.window.showErrorMessage('Failed to get sync status');
+        }
+    });
+
+    // Command: Submit to Workflow (Phase 3)
+    const submitToWorkflowCommand = vscode.commands.registerCommand('clarity.submitToWorkflow', async (promptId: string, reviewerIds: string[]) => {
+        try {
+            const success = await workflowManager.createApprovalRequest(promptId, reviewerIds, 24); // 24-hour SLA
+            if (success) {
+                vscode.window.showInformationMessage('✅ Prompt submitted to approval workflow');
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage('Failed to submit to workflow');
+        }
+    });
+
     // Add commands to subscriptions for proper cleanup
     context.subscriptions.push(
         forwardToCopilotCommand,
@@ -1100,7 +1199,11 @@ function registerCommands(context: vscode.ExtensionContext) {
         openVaultCommand,
         showHelpCommand,
         submitToVaultCommand,
-        suggestionsCommand
+        suggestionsCommand,
+        setupCloudSyncCommand,
+        openDashboardCommand,
+        showSyncStatusCommand,
+        submitToWorkflowCommand
     );
 }
 
@@ -1209,7 +1312,7 @@ async function handleVaultRequest(stream: vscode.ChatResponseStream): Promise<vs
  */
 export function deactivate() {
     console.log('Clarity extension deactivated');
-    
+
     // Clean up all chat participants
     if (clarityParticipant) {
         clarityParticipant.dispose();
@@ -1219,5 +1322,13 @@ export function deactivate() {
     }
     if (clarityThinkingParticipant) {
         clarityThinkingParticipant.dispose();
+    }
+
+    // Clean up Phase 3 managers
+    if (cloudSyncManager) {
+        cloudSyncManager.dispose();
+    }
+    if (dashboardProvider) {
+        dashboardProvider.dispose();
     }
 }

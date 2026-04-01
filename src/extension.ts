@@ -15,6 +15,7 @@ import { AdvancedWorkflowManager } from './advancedWorkflows';
 import { ClarityLogger } from './logger';
 import { ErrorTracker } from './errorTracking';
 import { AnalyticsManager } from './analytics';
+import { OnboardingManager } from './onboarding';
 
 /**
  * Clarity VS Code Extension - Entry Point
@@ -39,6 +40,7 @@ let workflowManager: AdvancedWorkflowManager;
 let clarityLogger: ClarityLogger;
 let errorTracker: ErrorTracker;
 let analyticsManager: AnalyticsManager;
+let onboardingManager: OnboardingManager;
 
 /**
  * Extension activation function
@@ -65,6 +67,7 @@ export function activate(context: vscode.ExtensionContext) {
     dashboardDataManager = new DashboardDataManager(context, teamVaultManager, analyticsManager);
     dashboardProvider = new DashboardProvider(context, teamVaultManager, analyticsManager);
     workflowManager = new AdvancedWorkflowManager(context);
+    onboardingManager = new OnboardingManager(context, clarityLogger);
 
     // Register dashboard webview
     context.subscriptions.push(
@@ -641,6 +644,11 @@ async function handleChatRequest(
         // Handle help sub-command
         if (request.command === 'help') {
             return await handleHelpRequest(stream);
+        }
+
+        // Handle onboarding sub-command
+        if (request.command === 'onboarding') {
+            return await handleOnboardingRequest(stream);
         }
 
         // Handle Vault sub-command
@@ -1239,6 +1247,28 @@ async function handleHelpRequest(stream: vscode.ChatResponseStream): Promise<vsc
     stream.markdown('**Try it now:** Just type your coding request or use a template with `template:rest-api`');
 
     return { metadata: { command: 'help' } };
+}
+
+/**
+ * Handles the /onboarding subcommand to show the interactive onboarding
+ */
+async function handleOnboardingRequest(stream: vscode.ChatResponseStream): Promise<vscode.ChatResult> {
+    stream.markdown('# 🎉 ClarityAI Onboarding\n\n');
+    stream.markdown('Starting the interactive 6-step onboarding guide...\n\n');
+    
+    // Launch the onboarding webview
+    await onboardingManager.showStep(0);
+    
+    stream.markdown('✨ The onboarding guide has been opened in a new panel. Follow the 6 steps to learn about:\n\n');
+    stream.markdown('1. Welcome to ClarityAI\n');
+    stream.markdown('2. Quick Start Guide\n');
+    stream.markdown('3. Three Powerful Modes\n');
+    stream.markdown('4. Prompt Templates\n');
+    stream.markdown('5. Privacy & Security\n');
+    stream.markdown('6. Ready to Get Started!\n\n');
+    stream.markdown('You can navigate through the steps using the Next/Previous buttons in the panel.\n');
+    
+    return { metadata: { command: 'onboarding' } };
 }
 
 /**

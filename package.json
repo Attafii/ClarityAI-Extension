@@ -2,7 +2,7 @@
   "name": "clarityai",
   "displayName": "ClarityAI - Prompt Improver for Copilot",
   "description": "Improves developer prompts by fixing grammar, spelling, and clarity before sending to Copilot",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "publisher": "AhmedAttafii",
   "author": "Ahmed Attafi",
   "license": "MIT",
@@ -94,6 +94,10 @@
           {
             "name": "help",
             "description": "Show the ClarityAI command guide and feature overview"
+          },
+          {
+            "name": "onboarding",
+            "description": "Show the interactive 6-step onboarding guide"
           }
         ]
       },

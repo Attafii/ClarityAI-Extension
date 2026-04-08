@@ -1,6 +1,6 @@
 # ClarityAI — The Smart Prompt Layer for VS Code Copilot
 
-[![Website](https://img.shields.io/badge/website-clarity--ai.app-blue?logo=google-chrome)](https://clarity-ai.app) [![VS Code](https://img.shields.io/badge/VS%20Code-1.90%2B-blue?logo=visual-studio-code)](https://code.visualstudio.com/) [![Version](https://img.shields.io/badge/version-1.4.1-green)](https://github.com/Attafii/ClarityAI-Extension) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Website](https://img.shields.io/badge/website-clarity--ai.app-blue?logo=google-chrome)](https://clarity-ai.app) [![VS Code](https://img.shields.io/badge/VS%20Code-1.90%2B-blue?logo=visual-studio-code)](https://code.visualstudio.com/) [![Version](https://img.shields.io/badge/version-1.4.2-green)](https://github.com/Attafii/ClarityAI-Extension) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 <img width="960" height="440" alt="image" src="https://github.com/user-attachments/assets/5f3606c4-2823-4155-aa0a-8b882a09fee9" />
 
@@ -34,7 +34,7 @@ ClarityAI enhances it to include security best practices, accessibility standard
 
 ---
 
-## 🎯 Key Features (v1.4.1)
+## 🎯 Key Features (v1.4.2)
 
 ### 🎭 Core Features
 
@@ -243,7 +243,7 @@ Press **Ctrl+Shift+P** (or **Cmd+Shift+P**) and type:
 
 ---
 
-## 📊 What's New in v1.4.1
+## 📊 What's New in v1.4.2
 
 ### Enterprise Features Release ✨
 

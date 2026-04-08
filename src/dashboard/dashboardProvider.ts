@@ -212,92 +212,114 @@ export class DashboardProvider implements vscode.WebviewViewProvider {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             color: var(--vscode-foreground);
             background: var(--vscode-editor-background);
-            padding: 16px;
+            padding: 20px;
             font-size: 13px;
             line-height: 1.6;
           }
 
-          .dashboard { display: grid; gap: 16px; }
+          .dashboard { display: grid; gap: 24px; }
 
           .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--vscode-panel-border);
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--vscode-widget-border);
           }
 
-          h1 { font-size: 18px; font-weight: 600; }
+          h1 { 
+            font-size: 20px; 
+            font-weight: 600;
+            letter-spacing: -0.02em;
+          }
 
           .controls { display: flex; gap: 8px; }
 
           button {
-            padding: 6px 12px;
+            padding: 6px 14px;
             background: var(--vscode-button-background);
             color: var(--vscode-button-foreground);
             border: none;
-            border-radius: 4px;
+            border-radius: 5px;
             cursor: pointer;
             font-size: 12px;
-            transition: background 0.2s;
+            font-weight: 500;
+            transition: all 0.2s ease;
           }
 
-          button:hover { background: var(--vscode-button-hoverBackground); }
+          button:hover { 
+            background: var(--vscode-button-hoverBackground);
+            transform: translateY(-1px);
+          }
 
           .section {
             background: var(--vscode-input-background);
-            border: 1px solid var(--vscode-panel-border);
-            border-radius: 4px;
-            padding: 12px;
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 8px;
+            padding: 20px;
+            transition: border-color 0.2s ease;
+          }
+
+          .section:hover {
+            border-color: var(--vscode-focusBorder);
           }
 
           .section-title {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
-            margin-bottom: 12px;
-            color: var(--vscode-foreground);
+            margin-bottom: 16px;
+            color: var(--vscode-descriptionForeground);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
           }
 
           .metrics {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 12px;
-            margin-bottom: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
           }
 
           .metric-card {
             background: var(--vscode-editor-background);
-            padding: 12px;
-            border-radius: 4px;
-            text-align: center;
-            border: 1px solid var(--vscode-panel-border);
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid var(--vscode-widget-border);
+            transition: all 0.2s ease;
+          }
+
+          .metric-card:hover {
+            border-color: var(--vscode-focusBorder);
+            transform: translateY(-2px);
           }
 
           .metric-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--vscode-testing-iconPassed);
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
             margin: 8px 0;
+            line-height: 1;
           }
 
           .metric-label {
             font-size: 11px;
             color: var(--vscode-descriptionForeground);
             text-transform: uppercase;
+            letter-spacing: 0.5px;
           }
 
           .chart-placeholder {
             background: var(--vscode-editor-background);
-            padding: 20px;
+            padding: 32px;
             text-align: center;
-            border: 1px dashed var(--vscode-panel-border);
-            border-radius: 4px;
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 6px;
             color: var(--vscode-descriptionForeground);
-            min-height: 150px;
+            min-height: 120px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 14px;
           }
 
           .list {
@@ -307,65 +329,105 @@ export class DashboardProvider implements vscode.WebviewViewProvider {
           .list-item {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--vscode-panel-border);
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--vscode-widget-border);
           }
 
           .list-item:last-child {
             border-bottom: none;
           }
 
-          .list-item-label { }
-          .list-item-value { font-weight: 600; }
+          .list-item-label { 
+            color: var(--vscode-foreground);
+            font-size: 13px;
+          }
+          
+          .list-item-value { 
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            font-size: 13px;
+          }
 
           .status-badge {
             display: inline-block;
-            padding: 2px 8px;
-            border-radius: 3px;
+            padding: 3px 10px;
+            border-radius: 4px;
             font-size: 11px;
             font-weight: 600;
+            letter-spacing: 0.3px;
           }
 
-          .status-approved { background: var(--vscode-testing-iconPassed); color: white; }
-          .status-pending { background: var(--vscode-testing-iconQueued); color: white; }
-          .status-draft { background: var(--vscode-descriptionForeground); }
+          .status-approved { 
+            background: var(--vscode-testing-iconPassed); 
+            color: var(--vscode-editor-background);
+          }
+          
+          .status-pending { 
+            background: var(--vscode-testing-iconQueued); 
+            color: var(--vscode-editor-background);
+          }
+          
+          .status-draft { 
+            background: var(--vscode-descriptionForeground);
+            color: var(--vscode-editor-background);
+          }
 
           .footer {
-            text-align: right;
+            text-align: center;
             font-size: 11px;
             color: var(--vscode-descriptionForeground);
+            margin-top: 8px;
+            padding-top: 16px;
+            border-top: 1px solid var(--vscode-widget-border);
+          }
+
+          .highlight {
             margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid var(--vscode-panel-border);
+            padding: 12px;
+            background: var(--vscode-editor-background);
+            border-left: 3px solid var(--vscode-button-background);
+            border-radius: 4px;
+          }
+
+          .highlight-title {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+          }
+
+          .highlight-value {
+            font-size: 13px;
+            color: var(--vscode-descriptionForeground);
           }
         </style>
       </head>
       <body>
         <div class="dashboard">
           <div class="header">
-            <h1>📊 ClarityAI Dashboard</h1>
+            <h1>Analytics Dashboard</h1>
             <div class="controls">
-              <button onclick="refresh()">↻ Refresh</button>
-              <button onclick="exportCSV()">📥 CSV</button>
-              <button onclick="exportJSON()">📥 JSON</button>
+              <button onclick="refresh()">Refresh</button>
+              <button onclick="exportCSV()">Export CSV</button>
+              <button onclick="exportJSON()">Export JSON</button>
             </div>
           </div>
 
           <!-- Vault Metrics -->
           <div class="section">
-            <div class="section-title">🏺 Vault Overview</div>
+            <div class="section-title">Vault Overview</div>
             <div class="metrics">
               <div class="metric-card">
-                <div class="metric-label">Total</div>
+                <div class="metric-label">Total Items</div>
                 <div class="metric-value">${data.vaultMetrics.total}</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Approved</div>
-                <div class="metric-value" style="color: var(--vscode-testing-iconPassed);">${data.vaultMetrics.approved}</div>
+                <div class="metric-value">${data.vaultMetrics.approved}</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Pending</div>
-                <div class="metric-value" style="color: var(--vscode-testing-iconQueued);">${data.vaultMetrics.pending}</div>
+                <div class="metric-value">${data.vaultMetrics.pending}</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Draft</div>
@@ -373,16 +435,16 @@ export class DashboardProvider implements vscode.WebviewViewProvider {
               </div>
             </div>
             ${data.vaultMetrics.mostUsedPrompt ? `
-              <div class="list-item">
-                <span class="list-item-label">Most Used: <strong>${data.vaultMetrics.mostUsedPrompt.title}</strong></span>
-                <span class="list-item-value">${data.vaultMetrics.mostUsedPrompt.usage}× used</span>
+              <div class="highlight">
+                <div class="highlight-title">Most Used Prompt</div>
+                <div class="highlight-value">${data.vaultMetrics.mostUsedPrompt.title} (${data.vaultMetrics.mostUsedPrompt.usage}× used)</div>
               </div>
             ` : ''}
           </div>
 
           <!-- Team Metrics -->
           <div class="section">
-            <div class="section-title">👥 Team Activity</div>
+            <div class="section-title">Team Activity</div>
             <div class="metrics">
               <div class="metric-card">
                 <div class="metric-label">Contributors</div>
@@ -402,8 +464,8 @@ export class DashboardProvider implements vscode.WebviewViewProvider {
                 <div class="list">
                   ${data.teamMetrics.topContributors.map((c: any) => `
                     <div class="list-item">
-                      <span>${c.name}</span>
-                      <span class="list-item-value">${c.contributions}</span>
+                      <span class="list-item-label">${c.name}</span>
+                      <span class="list-item-value">${c.contributions} contributions</span>
                     </div>
                   `).join('')}
                 </div>
@@ -413,22 +475,22 @@ export class DashboardProvider implements vscode.WebviewViewProvider {
 
           <!-- User Metrics -->
           <div class="section">
-            <div class="section-title">👤 Your Stats</div>
+            <div class="section-title">Your Statistics</div>
             <div class="list">
               <div class="list-item">
-                <span>Personal Prompts</span>
+                <span class="list-item-label">Personal Prompts</span>
                 <span class="list-item-value">${data.userMetrics.personalPrompts}</span>
               </div>
               <div class="list-item">
-                <span>Today's Enhancements</span>
+                <span class="list-item-label">Today's Enhancements</span>
                 <span class="list-item-value">${data.userMetrics.enhancementsPerDay}</span>
               </div>
               <div class="list-item">
-                <span>Favorite Category</span>
+                <span class="list-item-label">Favorite Category</span>
                 <span class="list-item-value">${data.userMetrics.favoriteCategory}</span>
               </div>
               <div class="list-item">
-                <span>Avg Quality Score</span>
+                <span class="list-item-label">Avg Quality Score</span>
                 <span class="list-item-value">${data.userMetrics.averageQualityScore.toFixed(2)}/10</span>
               </div>
             </div>
@@ -436,7 +498,7 @@ export class DashboardProvider implements vscode.WebviewViewProvider {
 
           <!-- Trends -->
           <div class="section">
-            <div class="section-title">📈 Trends</div>
+            <div class="section-title">7-Day Trends</div>
             <div class="chart-placeholder">
               Growth Rate: ${data.trends.growthRate.toFixed(1)}% this week
             </div>
@@ -465,7 +527,6 @@ export class DashboardProvider implements vscode.WebviewViewProvider {
           window.addEventListener('message', (event) => {
             const message = event.data;
             if (message.command === 'updateDashboard') {
-              // Reload page with new data
               location.reload();
             }
           });

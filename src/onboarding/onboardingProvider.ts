@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { OnboardingState, getOnboardingState, setOnboardingState } from './onboardingState';
 
 export class OnboardingProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'clarity.onboarding';
+    public static readonly viewType = 'clarity-onboarding';
     private view?: vscode.WebviewView;
     private context: vscode.ExtensionContext;
 
@@ -145,20 +145,20 @@ export class OnboardingProvider implements vscode.WebviewViewProvider {
     private getWebviewHtml(cssUri: vscode.Uri, jsUri: vscode.Uri, step: number): string {
         const stepTitles = [
             'Welcome to ClarityAI',
-            'Meet the Architect Persona',
-            'Meet the Security Persona',
-            'Meet the Reviewer Persona',
+            'Architect Persona',
+            'Security Persona',
+            'Reviewer Persona',
             'See it in Action',
             'Personalize Your Setup'
         ];
 
         const stepDescriptions = [
-            'Transform your prompts into powerful instructions for GitHub Copilot. Let\'s get you set up in just a few steps!',
-            'Expert system architecture with focus on scalability, SOLID principles, and design patterns.',
-            'Security expertise with OWASP Top 10 focus, vulnerability prevention, and secure code practices.',
-            'Critical code review with focus on edge cases, technical debt, and robust alternatives.',
-            'Watch how ClarityAI transforms a simple prompt into a structured, detailed instruction.',
-            'Choose your preferences and you\'re ready to enhance prompts like a pro.'
+            'Transform your prompts into powerful instructions for GitHub Copilot',
+            'Expert system architecture with focus on scalability and design patterns',
+            'Security expertise with vulnerability prevention and secure code practices',
+            'Critical code review with focus on edge cases and technical debt',
+            'Watch how ClarityAI transforms a simple prompt into structured instructions',
+            'Choose your preferences and you are ready to enhance prompts'
         ];
 
         return `
@@ -167,8 +167,284 @@ export class OnboardingProvider implements vscode.WebviewViewProvider {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="${cssUri}">
     <title>ClarityAI Onboarding</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .onboarding-container {
+            max-width: 100%;
+        }
+
+        .progress-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 32px;
+        }
+
+        .progress-step {
+            flex: 1;
+            height: 3px;
+            background: var(--vscode-input-background);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.active {
+            background: var(--vscode-button-background);
+        }
+
+        .progress-step.current {
+            background: var(--vscode-button-background);
+            opacity: 1;
+        }
+
+        .onboarding-content {
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--vscode-editor-foreground);
+        }
+
+        .step-description {
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .step-content {
+            margin-bottom: 32px;
+        }
+
+        .feature-grid {
+            display: grid;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .feature-card {
+            padding: 16px;
+            background: var(--vscode-input-background);
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .feature-card:hover {
+            border-color: var(--vscode-focusBorder);
+            background: var(--vscode-list-hoverBackground);
+        }
+
+        .feature-card h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--vscode-editor-foreground);
+        }
+
+        .feature-card p {
+            font-size: 13px;
+            color: var(--vscode-descriptionForeground);
+            line-height: 1.5;
+        }
+
+        .persona-intro {
+            text-align: center;
+        }
+
+        .persona-intro h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 16px 0 8px;
+        }
+
+        .persona-description {
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 16px;
+        }
+
+        .use-case {
+            margin: 16px 0;
+            padding: 12px;
+            background: var(--vscode-input-background);
+            border-left: 3px solid var(--vscode-button-background);
+            font-size: 13px;
+        }
+
+        .example {
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--vscode-input-background);
+            border-radius: 6px;
+        }
+
+        .example-input {
+            color: var(--vscode-descriptionForeground);
+            margin: 8px 0;
+            font-size: 13px;
+        }
+
+        .example-output {
+            color: var(--vscode-editor-foreground);
+            margin: 8px 0;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .demo {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .demo-box {
+            padding: 16px;
+            background: var(--vscode-input-background);
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 6px;
+        }
+
+        .demo-box.enhanced {
+            border-color: var(--vscode-button-background);
+        }
+
+        .demo-box h3 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--vscode-descriptionForeground);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .demo-text {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .arrow {
+            text-align: center;
+            color: var(--vscode-descriptionForeground);
+            font-size: 20px;
+        }
+
+        .demo-note {
+            text-align: center;
+            color: var(--vscode-descriptionForeground);
+            font-size: 13px;
+            font-style: italic;
+        }
+
+        .preferences {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            padding: 12px;
+            background: var(--vscode-input-background);
+            border-radius: 6px;
+            transition: background 0.2s ease;
+        }
+
+        .checkbox-label:hover {
+            background: var(--vscode-list-hoverBackground);
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            margin-top: 2px;
+            cursor: pointer;
+        }
+
+        .checkbox-label span {
+            font-size: 13px;
+        }
+
+        .info-box {
+            padding: 16px;
+            background: var(--vscode-inputValidation-infoBorder);
+            background-opacity: 0.1;
+            border: 1px solid var(--vscode-inputValidation-infoBorder);
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .info-box strong {
+            color: var(--vscode-editor-foreground);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+        }
+
+        .btn-primary:hover {
+            background: var(--vscode-button-hoverBackground);
+        }
+
+        .btn-secondary {
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+        }
+
+        .btn-secondary:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+        }
+
+        .btn-tertiary {
+            background: transparent;
+            color: var(--vscode-button-secondaryForeground);
+            border: 1px solid var(--vscode-widget-border);
+        }
+
+        .btn-tertiary:hover {
+            border-color: var(--vscode-focusBorder);
+        }
+    </style>
 </head>
 <body>
     <div class="onboarding-container">
@@ -185,18 +461,33 @@ export class OnboardingProvider implements vscode.WebviewViewProvider {
             ${this.getStepContent(step)}
 
             <div class="button-group">
-                ${step > 0 ? '<button id="prev-btn" class="btn-secondary">← Previous</button>' : ''}
-                ${step < 5 ? `<button id="next-btn" class="btn-primary">Next →</button>` : ''}
+                ${step > 0 ? '<button id="prev-btn" class="btn-secondary">Previous</button>' : ''}
+                ${step < 5 ? `<button id="next-btn" class="btn-primary">Next</button>` : ''}
                 ${step === 5 ? '<button id="complete-btn" class="btn-primary">Get Started</button>' : ''}
                 ${step === 0 ? '<button id="skip-btn" class="btn-tertiary">Skip</button>' : ''}
             </div>
         </div>
     </div>
 
-    <script src="${jsUri}"></script>
     <script>
+        const vscode = acquireVsCodeApi();
         const step = ${step};
-        window.vscode.postMessage({ command: 'step-loaded', step: step });
+
+        document.getElementById('next-btn')?.addEventListener('click', () => {
+            vscode.postMessage({ command: 'next-step', currentStep: step });
+        });
+
+        document.getElementById('prev-btn')?.addEventListener('click', () => {
+            vscode.postMessage({ command: 'previous-step', currentStep: step });
+        });
+
+        document.getElementById('complete-btn')?.addEventListener('click', () => {
+            vscode.postMessage({ command: 'complete-onboarding' });
+        });
+
+        document.getElementById('skip-btn')?.addEventListener('click', () => {
+            vscode.postMessage({ command: 'skip-onboarding' });
+        });
     </script>
 </body>
 </html>
@@ -210,22 +501,18 @@ export class OnboardingProvider implements vscode.WebviewViewProvider {
                     <div class="step-content">
                         <div class="feature-grid">
                             <div class="feature-card">
-                                <div class="icon">🎯</div>
                                 <h3>Smart Enhancement</h3>
                                 <p>AI-powered prompt improvement based on your field</p>
                             </div>
                             <div class="feature-card">
-                                <div class="icon">🎭</div>
                                 <h3>Expert Personas</h3>
                                 <p>Architect, Security, Reviewer, Tester, and more</p>
                             </div>
                             <div class="feature-card">
-                                <div class="icon">🔍</div>
                                 <h3>Privacy First</h3>
                                 <p>Secret Shield protects sensitive data</p>
                             </div>
                             <div class="feature-card">
-                                <div class="icon">📚</div>
                                 <h3>Prompt Library</h3>
                                 <p>Save and reuse prompts with your team</p>
                             </div>
@@ -237,14 +524,13 @@ export class OnboardingProvider implements vscode.WebviewViewProvider {
             case 2: // Security
             case 3: // Reviewer
                 const personas = [
-                    { icon: '🏗️', name: 'Architect', use: 'Design systems, scalability, architecture' },
-                    { icon: '🔐', name: 'Security', use: 'Security reviews, vulnerability scanning' },
-                    { icon: '👀', name: 'Reviewer', use: 'Code review, edge cases, best practices' }
+                    { name: 'Architect', use: 'Design systems, scalability, architecture' },
+                    { name: 'Security', use: 'Security reviews, vulnerability scanning' },
+                    { name: 'Reviewer', use: 'Code review, edge cases, best practices' }
                 ];
                 const persona = personas[step - 1];
                 return `
                     <div class="step-content persona-intro">
-                        <div class="persona-icon">${persona.icon}</div>
                         <h2>${persona.name}</h2>
                         <p class="persona-description">
                             Get expert-level ${persona.name.toLowerCase()} insights on everything you create.
@@ -253,7 +539,7 @@ export class OnboardingProvider implements vscode.WebviewViewProvider {
                         <div class="example">
                             <strong>Example:</strong>
                             <p class="example-input">Input: "design an API"</p>
-                            <p class="example-output">→ Gets comprehensive architecture guidance</p>
+                            <p class="example-output">Output: Gets comprehensive architecture guidance</p>
                         </div>
                     </div>
                 `;
@@ -277,7 +563,7 @@ export class OnboardingProvider implements vscode.WebviewViewProvider {
                                 • Loading and error states"
                             </p>
                         </div>
-                        <p class="demo-note">This is what ClarityAI does for every prompt!</p>
+                        <p class="demo-note">This is what ClarityAI does for every prompt</p>
                     </div>
                 `;
 

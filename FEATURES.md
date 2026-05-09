@@ -1,10 +1,14 @@
 # 🚀 ClarityAI: Complete Features Guide
 
-**Version**: 1.4.2  
-**Last Updated**: March 2026  
+**Version**: 1.5.0  
+**Last Updated**: May 8, 2026  
 **Status**: Production Ready
 
 ClarityAI is an intelligent VS Code extension that acts as a **translation and optimization layer** between developers and AI coding assistants like GitHub Copilot. It transforms simple developer intent into professional, context-aware, and technically precise prompts.
+
+**v1.5.0 Highlights**
+- Thinking mode now retries transient 524/timeout responses on the fallback model.
+- Release docs and help content were refreshed to match the 1.5.0 release.
 
 ---
 
@@ -50,7 +54,7 @@ ClarityAI automatically improves your prompts by:
 - Best for: Simple fixes, grammar corrections, quick questions
 
 **@clarity-thinking** (Thinking Mode)
-- Uses advanced reasoning models
+- Uses advanced reasoning models with automatic fallback retries for transient upstream timeouts
 - Deep analysis and comprehensive enhancement
 - Best for: Architecture decisions, complex logic, system design
 
@@ -608,6 +612,7 @@ Draft → Pending Review → Approved/Rejected/Changes Requested
 @clarity templates              # List all
 @clarity t:template-id          # Use specific template
 @clarity t:rest-api resource=users method=POST  # With parameters
+@clarity /skills                # Build a reusable skills.md workflow starter
 ```
 
 ### Template Categories
@@ -654,6 +659,12 @@ Draft → Pending Review → Approved/Rejected/Changes Requested
 - Contributing guides
 - Code of conduct
 
+**Agent Workflows**:
+- skills.md workflow starter
+- 7 reference files for project context
+- 21 workflow commands with next-step guidance
+- Anti-patterns and `.clarity.md` context protocol
+
 ### Template Parameters
 
 **Dynamic Filling**:
@@ -676,6 +687,23 @@ Draft → Pending Review → Approved/Rejected/Changes Requested
 3. Define parameters
 4. Share with team
 5. Reuse and iterate
+
+### 🧩 Skills.md Workflow Starter
+
+ClarityAI now includes a dedicated agent-workflow template for building a reusable `skills.md` file.
+
+**It helps users create**:
+- A project-specific workflow skill instead of generic AI instructions
+- 7 domain-specific reference files
+- A `.clarity.md` context gathering protocol
+- 21 commands for diagnose, evaluate, refine, streamline, fortify, and more
+- Curated anti-patterns and a next-step recommendation after every command
+
+**Try it**:
+```text
+@clarity /skills
+@clarity t:skills-md
+```
 
 ---
 

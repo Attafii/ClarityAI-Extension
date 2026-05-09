@@ -8,7 +8,7 @@
  * - No sensitive data logging
  */
 
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 

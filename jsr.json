@@ -1,0 +1,46 @@
+{
+  "name": "clarityai",
+  "version": "1.5.0",
+  "description": "Cognitive Scaffolding CLI and Terminal-based Developer OS",
+  "readme": "README.md",
+  "license": "MIT",
+  "homepage": "https://clarity-ai.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Attafii/ClarityAI-Extension.git"
+  },
+  "exports": {
+    "./cli": "./out/cli.js",
+    "./protocol": "./out/protocol/index.js",
+    "./distiller": "./out/distiller/index.js",
+    "./ui": "./out/cli/ui/index.js"
+  },
+  "publish": {
+    "include": [
+      "out/",
+      "README.md",
+      "package.json"
+    ],
+    "exclude": [
+      "out/__tests__/**",
+      "out/**/*.test.js",
+      "out/**/*.test.js.map",
+      "node_modules/**"
+    ]
+  },
+  "keywords": [
+    "prompt",
+    "clarity",
+    "ai",
+    "developer-tools",
+    "cognitive-scaffolding",
+    "cli",
+    "copilot",
+    "agentic"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0",
+    "deno": ">=1.38.0"
+  }
+}

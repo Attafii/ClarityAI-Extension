@@ -3,7 +3,7 @@
  * Provides intelligent prompt suggestions based on user context and activity
  */
 
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 import { ClarityLogger } from './logger';
 
 /**

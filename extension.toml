@@ -1,0 +1,7 @@
+id = "clarity-ai"
+name = "ClarityAI"
+version = "1.5.0"
+schema_version = 1
+authors = ["Ahmed Attafi"]
+description = "Prompt engineering tool for AI-native workflows."
+repository = "https://github.com/Attafii/ClarityAI" # Your repo link

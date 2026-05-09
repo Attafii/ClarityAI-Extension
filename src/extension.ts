@@ -25,6 +25,7 @@ import { OnboardingProvider } from './onboarding/onboardingProvider';
  * - @clarity: Smart routing (chooses fast or thinking based on complexity)
  * - @clarity-fast: Always uses ClarityAI fast mode
  * - @clarity-thinking: Always uses ClarityAI advanced reasoning mode
+ * - @clarity /skills: Generates a reusable skills.md workflow starter
  */
 
 let clarityParticipant: vscode.ChatParticipant | undefined;
@@ -667,6 +668,11 @@ async function handleChatRequest(
             return await handleVaultRequest(stream);
         }
 
+        // Handle skills sub-command
+        if (request.command === 'skills') {
+            return await handleTemplateRequest('template:skills-md', stream);
+        }
+
         // Handle edge case: empty prompt
         if (!userPrompt) {
             stream.markdown('❌ **No prompt detected.** Please provide text to improve.');
@@ -771,7 +777,7 @@ async function handleChatRequest(
         let effectivePersona = request.command;
         if (!effectivePersona && config.defaultPersona !== 'none') {
             effectivePersona = config.defaultPersona;
-            const personaLabel = effectivePersona.charAt(0).toUpperCase() + effectivePersona.slice(1);
+            const personaLabel = config.defaultPersona.charAt(0).toUpperCase() + config.defaultPersona.slice(1);
             stream.markdown(`🎭 **Default Persona Applied:** **${personaLabel}**\n\n`);
         }
 
@@ -1093,6 +1099,14 @@ function registerCommands(context: vscode.ExtensionContext) {
         });
     });
 
+    // Command: Show Skills.md Builder in Chat
+    const showSkillsCommand = vscode.commands.registerCommand('clarity.showSkills', async () => {
+        await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
+        await vscode.commands.executeCommand('workbench.action.chat.open', {
+            query: '@clarity /skills'
+        });
+    });
+
     // Command: Submit prompt to vault for team approval
     const submitToVaultCommand = vscode.commands.registerCommand('clarity.vault.submit', async (title: string, enhancedPrompt: string) => {
         try {
@@ -1217,6 +1231,7 @@ function registerCommands(context: vscode.ExtensionContext) {
         openUrlCommand,
         openVaultCommand,
         showHelpCommand,
+        showSkillsCommand,
         submitToVaultCommand,
         suggestionsCommand,
         setupCloudSyncCommand,
@@ -1230,7 +1245,7 @@ function registerCommands(context: vscode.ExtensionContext) {
  * Handles the /help subcommand to show a dashboard of features
  */
 async function handleHelpRequest(stream: vscode.ChatResponseStream): Promise<vscode.ChatResult> {
-    stream.markdown('# 🚀 Welcome to ClarityAI v1.3.0\n\n');
+    stream.markdown('# 🚀 Welcome to ClarityAI v1.5.0\n\n');
     stream.markdown('I’m your intelligent prompt orchestration layer. I transform basic thoughts into production-ready instructions.\n\n');
     
     stream.markdown('### 🎭 Expert Personas\n');
@@ -1241,6 +1256,7 @@ async function handleHelpRequest(stream: vscode.ChatResponseStream): Promise<vsc
     stream.markdown('- **`/documentation`**: Focuses on JSDoc, READMEs, and clarity.\n');
     stream.markdown('- **`/performance`**: Focuses on optimization and memory management.\n');
     stream.markdown('- **`/frontend`**: Focuses on UI/UX, A11y, and CSS.\n\n');
+    stream.markdown('- **Thinking Mode Resilience**: Transient upstream 524/timeout failures retry automatically on the fallback model.\n\n');
     
     stream.markdown('### 🛡️ Security & Privacy\n');
     stream.markdown('- **Secret Shield**: Automatically masks keys/PII locally.\n');
@@ -1249,13 +1265,21 @@ async function handleHelpRequest(stream: vscode.ChatResponseStream): Promise<vsc
     stream.markdown('### 🏺 Persistence\n');
     stream.markdown('- **`/vault`**: Access your private and team-shared prompts.\n');
     stream.markdown('- **Save Buttons**: Click "Save to Vault" after any enhancement to keep it forever.\n\n');
+
+    stream.markdown('### 🧩 Agent Workflow Skills\n');
+    stream.markdown('- **`/skills`**: Generates a project-specific `skills.md` starter with 7 reference files, 21 commands, anti-patterns, and a `.clarity.md` protocol.\n');
+    stream.markdown('- **`template:skills-md`**: Opens the full starter prompt if you want to customize it first.\n\n');
     
     stream.markdown('### ⚙️ Optimization\n');
     stream.markdown('- **Tech Stack Sync**: Auto-detects versions from `package.json`.\n');
     stream.markdown('- **Context Compressor**: Prunes workspace metadata to save tokens.\n\n');
     
     stream.markdown('---\n');
-    stream.markdown('**Try it now:** Just type your coding request or use a template with `template:rest-api`');
+    stream.markdown('**Try it now:** Just type your coding request or use `@clarity /skills` to build a reusable workflow skill, or start with `template:rest-api`.\n\n');
+    stream.button({
+        title: '🧩 Open Skills.md Builder',
+        command: 'clarity.showSkills'
+    });
 
     return { metadata: { command: 'help' } };
 }

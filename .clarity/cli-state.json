@@ -1,0 +1,10 @@
+{
+  "clarity:quota": {
+    "hourlyCount": 1,
+    "dailyCount": 6,
+    "lastRequestTime": "2026-05-09T10:09:42.099Z",
+    "lastDailyReset": "2026-05-09T09:29:00.857Z",
+    "tokensUsedToday": 650,
+    "resetHour": 0
+  }
+}

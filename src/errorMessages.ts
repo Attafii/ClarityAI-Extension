@@ -353,6 +353,9 @@ export function getErrorCodeFromHttpStatus(statusCode: number): string {
             return ErrorCode.API_FORBIDDEN;
         case 404:
             return ErrorCode.API_NOT_FOUND;
+        case 408:
+        case 524:
+            return ErrorCode.API_TIMEOUT;
         case 429:
             return ErrorCode.API_RATE_LIMIT;
         case 500:

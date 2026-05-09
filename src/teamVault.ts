@@ -3,7 +3,7 @@
  * Handles saving prompts to vault and team approval process
  */
 
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 import { ClarityLogger } from './logger';
 import { ErrorTracker } from './errorTracking';
 

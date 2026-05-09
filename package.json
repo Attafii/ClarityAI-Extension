@@ -1,8 +1,8 @@
 {
-  "name": "clarityai",
+  "name": "@attafii/cli",
   "displayName": "ClarityAI - Prompt Improver for Copilot",
   "description": "Improves developer prompts by fixing grammar, spelling, and clarity before sending to Copilot",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "publisher": "AhmedAttafii",
   "author": "Ahmed Attafi",
   "license": "MIT",
@@ -23,6 +23,7 @@
     "url": "https://github.com/Attafii/ClarityAI-Extension.git"
   },
   "engines": {
+    "node": ">=16.0.0",
     "vscode": "^1.90.0"
   },
   "categories": [
@@ -33,6 +34,22 @@
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
+  "type": "commonjs",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "out/**/*.js",
+    "out/**/*.js.map",
+    "!out/**/__tests__/**",
+    "img/",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "clarity": "./out/cli.js",
+    "clarityai": "./out/cli.js"
+  },
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -93,6 +110,10 @@
             "description": "Focus on UI/UX, accessibility (A11y), and responsive design"
           },
           {
+            "name": "skills",
+            "description": "Generate a reusable skills.md workflow starter with reference files, anti-patterns, and context protocol"
+          },
+          {
             "name": "vault",
             "description": "List and recall your saved enhanced prompts"
           },
@@ -141,6 +162,10 @@
         "title": "Clarity: Show Command Guide"
       },
       {
+        "command": "clarity.showSkills",
+        "title": "Clarity: Show Skills.md Builder"
+      },
+      {
         "command": "clarity.setupCloudSync",
         "title": "ClarityAI: Setup Cloud Sync",
         "description": "Configure cloud storage for vault synchronization"
@@ -186,7 +211,16 @@
         },
         "clarity.defaultPersona": {
           "type": "string",
-          "enum": ["none", "architect", "security", "reviewer", "tester", "documentation", "performance", "frontend"],
+          "enum": [
+            "none",
+            "architect",
+            "security",
+            "reviewer",
+            "tester",
+            "documentation",
+            "performance",
+            "frontend"
+          ],
           "default": "none",
           "description": "Sets a default expert persona to use for all prompt enhancements when no subcommand is used",
           "enumDescriptions": [
@@ -212,7 +246,12 @@
         },
         "clarity.cloudSync.provider": {
           "type": "string",
-          "enum": ["azure", "aws", "firebase", "none"],
+          "enum": [
+            "azure",
+            "aws",
+            "firebase",
+            "none"
+          ],
           "default": "none",
           "description": "Cloud storage provider for vault synchronization"
         },
@@ -238,8 +277,10 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
+    "prepublishOnly": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
+    "cli": "node ./out/cli.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -249,7 +290,7 @@
     "@jest/globals": "^29.7.0",
     "@types/jest": "^29.5.11",
     "@types/node": "20.x",
-    "@types/vscode": "^1.90.0",
+    "@types/vscode": "^1.118.0",
     "@vscode/vsce": "^3.6.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.1",
@@ -257,7 +298,9 @@
   },
   "dependencies": {
     "@types/node-fetch": "^2.6.11",
-    "dotenv": "^17.2.2",
-    "node-fetch": "^2.7.0"
+    "boxen": "^5.1.2",
+    "chalk": "^4.1.2",
+    "node-fetch": "^2.7.0",
+    "ora": "^5.4.1"
   }
 }

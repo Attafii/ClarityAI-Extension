@@ -1,6 +1,6 @@
 # ClarityAI — The Smart Prompt Layer for VS Code Copilot
 
-[![Website](https://img.shields.io/badge/website-clarity--ai.app-blue?logo=google-chrome)](https://clarity-ai.app) [![VS Code](https://img.shields.io/badge/VS%20Code-1.90%2B-blue?logo=visual-studio-code)](https://code.visualstudio.com/) [![Version](https://img.shields.io/badge/version-1.4.2-green)](https://github.com/Attafii/ClarityAI-Extension) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Website](https://img.shields.io/badge/website-clarity--ai.app-blue?logo=google-chrome)](https://clarity-ai.app) [![VS Code](https://img.shields.io/badge/VS%20Code-1.90%2B-blue?logo=visual-studio-code)](https://code.visualstudio.com/) [![Version](https://img.shields.io/badge/version-1.5.0-green)](https://github.com/Attafii/ClarityAI-Extension) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 <img width="960" height="440" alt="image" src="https://github.com/user-attachments/assets/5f3606c4-2823-4155-aa0a-8b882a09fee9" />
 
@@ -34,7 +34,7 @@ ClarityAI enhances it to include security best practices, accessibility standard
 
 ---
 
-## 🎯 Key Features (v1.4.2)
+## 🎯 Key Features (v1.5.0)
 
 ### 🎭 Core Features
 
@@ -45,7 +45,7 @@ ClarityAI enhances it to include security best practices, accessibility standard
 **Smart Routing**
 - `@clarity` - Automatically chooses fast or deep-thinking mode based on prompt complexity
 - `@clarity-fast` - Quick enhancements for simple requests
-- `@clarity-thinking` - Advanced reasoning for complex architectural decisions
+- `@clarity-thinking` - Advanced reasoning for complex architectural decisions, with automatic fallback retries for transient upstream timeouts
 
 **Privacy & Security**
 - **Secret Shield**: Automatically detects and masks API keys, tokens, and PII before sending
@@ -110,9 +110,10 @@ ClarityAI enhances it to include security best practices, accessibility standard
 
 **Template Library**
 - 50+ pre-built professional templates
-- Categories: API, UI, DevOps, Database, Testing
+- Categories: API, UI, DevOps, Database, Testing, Agent Workflows
 - Searchable and customizable
 - Fill with parameters: `@clarity t:rest-api resource=users method=POST`
+- Build agent workflow skills: `@clarity /skills` or `@clarity t:skills-md`
 
 **Quality Analysis**
 - Real-time quality score (1-10) for your prompts
@@ -160,6 +161,7 @@ ClarityAI enhances it to include security best practices, accessibility standard
 
 # Use templates
 @clarity t:rest-api resource=products method=POST
+@clarity /skills                        # Build a reusable skills.md workflow starter
 @clarity templates                    # List all templates
 
 # Work with vault
@@ -207,6 +209,7 @@ Press **Ctrl+Shift+P** (or **Cmd+Shift+P**) and type:
 | `ClarityAI: Show Cloud Sync Status` | Check synchronization status |
 | `ClarityAI: Submit to Approval Workflow` | Submit prompt for multi-reviewer approval |
 | `Clarity: Open Prompt Vault` | Browse and manage saved prompts |
+| `Clarity: Show Skills.md Builder` | Open the agent workflow skills.md starter |
 | `Clarity: Show Command Guide` | Quick reference of all commands |
 
 ---
@@ -243,35 +246,16 @@ Press **Ctrl+Shift+P** (or **Cmd+Shift+P**) and type:
 
 ---
 
-## 📊 What's New in v1.4.2
+## 📊 What's New in v1.5.0
 
-### Enterprise Features Release ✨
+### Reliability Update ✨
 
-**Cloud Synchronization**
-- ☁️ Multi-device vault sync (Azure/AWS/Firebase)
-- 🔄 Automatic conflict resolution with backups
-- 📴 Offline-first with intelligent queueing
-- 📊 Status bar integration
+**Thinking Mode Resilience**
+- `@clarity-thinking` now retries transient upstream 524/timeout failures with the fallback model.
+- This reduces raw enhancement failures when the primary reasoning model is slow.
 
-**Analytics Dashboard**
-- 📈 Real-time metrics and team activity
-- 🏆 Team leaderboard and top prompts
-- 📉 7-day trends and growth predictions
-- 💾 Export to CSV/JSON
-
-**Advanced Workflows**
-- ✅ Multi-reviewer approval system
-- 💬 Comment threads and feedback
-- 📝 Full version history and comparison
-- ⏱️ SLA deadline management with alerts
-- 🔄 Request changes workflow
-
-**Performance & Quality**
-- 10,500+ lines of production code
-- Zero security vulnerabilities
-- < 200ms startup time
-- < 100MB memory footprint
-- 70%+ test coverage
+**Docs Refresh**
+- README, FEATURES.md, help banner, and changelog updated for the 1.5.0 release.
 
 See [CHANGELOG.md](CHANGELOG.md) for complete release notes.
 

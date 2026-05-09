@@ -4,7 +4,7 @@
  * Supports both hourly and daily quotas
  */
 
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 
 export interface QuotaConfig {
     maxRequestsPerHour: number;
@@ -289,13 +289,20 @@ class QuotaState {
     resetCountersIfNeeded(): void {
         const now = new Date();
 
-        // Reset hourly counter every hour
-        if (!this.lastRequestTime || now.getUTCHours() !== this.lastRequestTime.getUTCHours()) {
+        const currentHourStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), 0, 0, 0));
+        const lastRequestHourStart = this.lastRequestTime
+            ? new Date(Date.UTC(this.lastRequestTime.getUTCFullYear(), this.lastRequestTime.getUTCMonth(), this.lastRequestTime.getUTCDate(), this.lastRequestTime.getUTCHours(), 0, 0, 0))
+            : undefined;
+
+        // Reset hourly counter when we move into a new UTC hour bucket.
+        if (!lastRequestHourStart || lastRequestHourStart < currentHourStart) {
             this.hourlyCount = 0;
         }
 
-        // Reset daily counter at configured reset hour
-        if (!this.lastDailyReset || this.getDriftedHour(now) >= this.resetHour) {
+        const mostRecentReset = this.getMostRecentDailyReset(now);
+
+        // Reset daily counter only after the configured reset boundary has passed.
+        if (!this.lastDailyReset || this.lastDailyReset < mostRecentReset) {
             this.dailyCount = 0;
             this.tokensUsedToday = 0;
             this.lastDailyReset = new Date(now);
@@ -305,8 +312,14 @@ class QuotaState {
     /**
      * Get adjusted hour for daily reset
      */
-    private getDriftedHour(date: Date): number {
-        return date.getUTCHours();
+    private getMostRecentDailyReset(now: Date): Date {
+        const resetTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), this.resetHour, 0, 0, 0));
+
+        if (resetTime > now) {
+            resetTime.setUTCDate(resetTime.getUTCDate() - 1);
+        }
+
+        return resetTime;
     }
 }
 

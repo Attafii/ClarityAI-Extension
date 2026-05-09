@@ -17,6 +17,9 @@ module.exports = {
             }
         }]
     },
+    transformIgnorePatterns: [
+        'node_modules/(?!(ora|boxen|chalk|gradient-string)/)'
+    ],
     collectCoverageFrom: [
         'src/**/*.ts',
         '!src/__tests__/**',
@@ -74,6 +77,9 @@ module.exports = {
     bail: false,
     setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
     moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/src/$1'
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^./cli/ui/spinner$': '<rootDir>/src/__tests__/__mocks__/spinner.ts',
+        '^./cli/ui/boxes$': '<rootDir>/src/__tests__/__mocks__/boxes.ts',
+        '^./cli/ui/header$': '<rootDir>/src/__tests__/__mocks__/header.ts'
     }
 };

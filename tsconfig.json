@@ -12,13 +12,17 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
+    "types": ["node", "vscode"],
+    "typeRoots": ["./node_modules/@types"],
     "declaration": false,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true
   },
   "exclude": [
     "node_modules",
     ".vscode-test",
-    "out"
+    "out",
+    "src/__tests__"
   ]
 }

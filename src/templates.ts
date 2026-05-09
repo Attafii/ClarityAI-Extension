@@ -18,6 +18,7 @@ export const TEMPLATE_CATEGORIES = {
     DATABASE: 'Database',
     ARCHITECTURE: 'Architecture',
     DEBUGGING: 'Debugging',
+    AGENT_WORKFLOWS: 'Agent Workflows',
     GENERAL: 'General'
 };
 
@@ -275,6 +276,65 @@ PLEASE PROVIDE:
 4. How to prevent this in the future
 5. Related best practices`,
         variables: ['errorMessage', 'context', 'goal', 'actualBehavior']
+    },
+
+    // Agent Workflows
+    {
+        id: 'skills-md',
+        name: 'Skills.md Workflow Starter',
+        category: TEMPLATE_CATEGORIES.AGENT_WORKFLOWS,
+        description: 'Draft a project-specific skills.md with workflow commands, anti-patterns, and context protocol',
+        template: `Create a ready-to-save skills.md file for an AI agent workflow in this project.
+
+WHY THIS MATTERS
+AI agents are only as good as the workflows they operate in. Without guidance, they repeat the same predictable mistakes: unstructured prompts, context-window overflow, tool sprawl, weak error handling, and multi-agent systems for problems a single agent can solve.
+
+WHAT TO DELIVER
+- A concise skills.md that can live at the project root or in .clarity/
+- Clear project-specific guidance instead of generic AI advice
+- A context gathering protocol in .clarity.md
+- A command catalog with 21 workflow actions
+- 7 domain-specific reference files
+- Explicit anti-patterns that tell the AI what not to do
+- A next-step recommendation at the end of every command
+
+REFERENCE FILES
+1. .clarity/reference/overview.md
+2. .clarity/reference/context.md
+3. .clarity/reference/commands.md
+4. .clarity/reference/anti-patterns.md
+5. .clarity/reference/examples.md
+6. .clarity/reference/decision-rules.md
+7. .clarity/reference/next-steps.md
+
+COMMAND CATALOG
+Include 21 commands that cover diagnose, evaluate, refine, streamline, fortify, and related workflow moves:
+diagnose, inspect, trace, evaluate, compare, review, refine, simplify, rewrite, streamline, compress, prune, fortify, harden, guard, validate, test, document, plan, prioritize, handoff.
+
+ANTI-PATTERNS
+- No unstructured prompts
+- No context-window overflow
+- No tool sprawl
+- No silent failures
+- No multi-agent systems for simple single-agent work
+- No dead ends without a next step
+
+.clarity.md CONTEXT PROTOCOL
+Document how the agent should gather project-specific awareness before every command:
+- project name
+- stack and versions
+- relevant files
+- current goal
+- constraints and risks
+- acceptance criteria
+- owner or reviewer
+- next action
+
+STYLE
+- Use direct, actionable language
+- Keep sections concise
+- Make it easy to skim
+- End each command description with one concrete next step`,
     },
     
     // General

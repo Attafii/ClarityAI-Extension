@@ -70,6 +70,10 @@ function extractEnhancedPrompt(llmResponse: string): string {
     return cleaned;
 }
 
+function isRetryableApiStatus(status: number): boolean {
+    return status === 408 || status === 500 || status === 502 || status === 503 || status === 504 || status === 524;
+}
+
 /**
  * Calls external API to improve a prompt with conversation context
  * @param prompt The prompt to improve
@@ -202,6 +206,7 @@ ENHANCED PROMPT:`;
     // Try primary model first
     let response: Response;
     let modelUsed = modelToUse;
+    const fallbackModel = 'meta/llama-3.3-70b-instruct';
     
     try {
         console.log(`🎯 Attempting with ${modelToUse}...`);
@@ -238,10 +243,10 @@ ENHANCED PROMPT:`;
         });
 
         if (!response.ok) {
-            // Standard fallback to secondary engine if primary fails
-            if (!modelOverride) {
+            // Retry transient upstream failures, including Cloudflare 524 timeouts, with the fallback model.
+            if (modelUsed !== fallbackModel && isRetryableApiStatus(response.status)) {
                 console.warn(`⚠️ Primary engine failed (${response.status}), falling back to secondary engine...`);
-                modelUsed = 'meta/llama-3.3-70b-instruct';
+                modelUsed = fallbackModel;
                 
                 response = await fetch(`${config.apiBaseUrl}/chat/completions`, {
                     method: 'POST',
@@ -267,13 +272,13 @@ ENHANCED PROMPT:`;
                         stream: false
                     })
                 });
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
+            }
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                if (modelUsed === fallbackModel && modelToUse !== fallbackModel) {
                     throw new Error(`API error (both models failed): ${response.status} - ${errorText}`);
                 }
-            } else {
-                const errorText = await response.text();
                 throw new Error(`API error: ${response.status} - ${errorText}`);
             }
         }
